@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<operations>
+  <install type="core">Claroline\CoreBundle\ClarolineCoreBundle</install>
+  <install type="plugin">Claroline\ActivityToolBundle\ClarolineActivityToolBundle</install>
+  <install type="plugin">Claroline\PdfPlayerBundle\ClarolinePdfPlayerBundle</install>
+  <install type="plugin">Claroline\VideoPlayerBundle\ClarolineVideoPlayerBundle</install>
+  <install type="plugin">Claroline\WebResourceBundle\ClarolineWebResourceBundle</install>
+  <install type="plugin">Icap\SocialmediaBundle\IcapSocialmediaBundle</install>
+  <install type="plugin">HeVinci\UrlBundle\HeVinciUrlBundle</install>
+  <install type="plugin">HeVinci\FavouriteBundle\HeVinciFavouriteBundle</install>
+  <install type="plugin">Claroline\AgendaBundle\ClarolineAgendaBundle</install>
+  <install type="plugin">Claroline\MessageBundle\ClarolineMessageBundle</install>
+  <install type="plugin">Claroline\ForumBundle\ClarolineForumBundle</install>
+  <install type="plugin">Claroline\AnnouncementBundle\ClarolineAnnouncementBundle</install>
+  <install type="plugin">Claroline\ScormBundle\ClarolineScormBundle</install>
+  <install type="plugin">Claroline\ImagePlayerBundle\ClarolineImagePlayerBundle</install>
+  <install type="plugin">Claroline\SurveyBundle\ClarolineSurveyBundle</install>
+  <install type="plugin">Claroline\CursusBundle\ClarolineCursusBundle</install>
+  <install type="plugin">Claroline\RssReaderBundle\ClarolineRssReaderBundle</install>
+  <install type="core">Icap\NotificationBundle\IcapNotificationBundle</install>
+  <install type="plugin">Icap\BlogBundle\IcapBlogBundle</install>
+  <install type="plugin">Icap\WikiBundle\IcapWikiBundle</install>
+  <install type="plugin">Icap\LessonBundle\IcapLessonBundle</install>
+  <install type="plugin">Icap\BadgeBundle\IcapBadgeBundle</install>
+  <install type="plugin">Claroline\TeamBundle\ClarolineTeamBundle</install>
+  <install type="plugin">Icap\PortfolioBundle\IcapPortfolioBundle</install>
+  <install type="plugin">Icap\WebsiteBundle\IcapWebsiteBundle</install>
+  <install type="plugin">UJM\ExoBundle\UJMExoBundle</install>
+  <install type="plugin">HeVinci\CompetencyBundle\HeVinciCompetencyBundle</install>
+</operations>
