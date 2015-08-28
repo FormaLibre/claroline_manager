@@ -15,6 +15,8 @@ mysql_root_pwd = parameters['mysql_root_pwd']
 backup_directory = parameters['backup_directory']
 platform_dir = parameters['platform_dir']
 
+permissions_script = os.path.dirname(os.path.abspath(__file__)) + '/permissions.sh'
+
 help_action = """
     param:   Cree un nouveau fichier contenant les parametres d'installation d'une plateforme. \n
     create:  Genere l'arborescence de fichier d'une plateforme. \n
@@ -22,7 +24,9 @@ help_action = """
     backup:  Genere le backup de toutes les plateforme. \n
     update:  Met a jour toutes les plateformes - attention au symlink. \n  
     restore: Restore une plateforme. \n
+    perm:    Set the permissions. \n
     test:    Test si une plateforme existe. \n
+    dmain:   Remove the maintenance mode. \n
 """
 
 help_nom = """
@@ -108,7 +112,7 @@ def update_claroline(platform):
     command = 'rm -rf ' + platform['user_home'] + 'claroline/app/cache/*'
     print command
     os.system(command)
-    claroline_console(platform, 'cache:warm')
+    #claroline_console(platform, 'cache:warm')
     claroline_console(platform, 'claroline:update')
     claroline_console(platform, 'assets:install')
 
@@ -265,5 +269,36 @@ elif args.action == 'update':
 
         for platform in platforms:
             update_claroline(platform)
+
+###############
+# PERMISSIONS #
+###############
+
+elif args.action == 'perm':
+    if (not args.name):
+        raise Exception('Le nom de la plateforme est requis. "ecoles-base" pour toutes les ecoles"')
+    
+    if args.name == 'ecoles-base':
+        platforms = get_installed_platforms()
+
+        for platform in platforms:
+            command = 'sh ' + permissions_script + ' ' + platform['user_home'] + 'claroline'
+            print command
+            os.system(command)
+
+###############
+# MAINTENANCE #
+###############
+
+elif args.action == 'dmain':
+    if (not args.name):
+        raise Exception('Le nom de la plateforme est requis. "ecoles-base" pour toutes les ecoles"')
+    if args.name == 'ecoles-base':
+        platforms = get_installed_platforms()
+
+        for platform in platforms:
+            claroline_console(platform, 'claroline:maintenance:disable')
 else:
     print "Parametres incorrects"
+
+
