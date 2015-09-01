@@ -26,6 +26,7 @@ help_action = """
     restore: Restore une plateforme. \n
     perm:    Set the permissions. \n
     test:    Test si une plateforme existe. \n
+    emain:   Enable the maintenance mode. \n
     dmain:   Remove the maintenance mode. \n
 """
 
@@ -203,19 +204,14 @@ elif args.action == "install":
     if (not args.name):
         raise Exception('Le nom de la plateforme est requis.')
 
-    with open("plateformes/" + args.name + ".yml", 'r') as stream:
-        config = yaml.load(stream)
-
-    console = "php " + config["user_home"] + "claroline/app/console "
-
-    # Install Claroline
-    # use console.execute_command instead
-    os.system(console + "claroline:install")
-    os.system(console + "assets:install --symlink")
-    os.system(console + "assetic:dump")
-    os.system(console + "claroline:user:create -a Admin Claroline clacoAdmin " + claro_admin_pwd)
-    os.system(console + "claroline:user:create -a Admin " + config["name"] + " " + config["name"] + "Admin " + config["ecole_admin_pwd"])
-    os.system("bash /root/install-script/permissions.sh " + config["user_home"] + "claroline" )
+    platform = get_installed_platform(args.name)
+    os.chdir(platform['user_home'] + 'claroline')
+    claroline_console(platform, "claroline:install")
+    claroline_console(platform, "assets:install --symlink")
+    claroline_console(platform, "assetic:dump")
+    claroline_console(platform,  "claroline:user:create -a Admin Claroline clacoAdmin " + claro_admin_pwd)
+    claroline_console(platform,  "claroline:user:create -a Admin " + platform["name"] + " " + platform["name"] + "Admin " + platform["ecole_admin_pwd"])
+    os.system("bash /root/install-script/permissions.sh " + platform["user_home"] + "claroline" )
 
 ##########
 # BACKUP #
@@ -276,7 +272,7 @@ elif args.action == 'update':
 
 elif args.action == 'perm':
     if (not args.name):
-        raise Exception('Le nom de la plateforme est requis. "ecoles-base" pour toutes les ecoles"')
+        raise Exception('Le nom de la plateforme est requis. "ecoles-base" pour toutes les ecoles')
     
     if args.name == 'ecoles-base':
         platforms = get_installed_platforms()
@@ -292,12 +288,23 @@ elif args.action == 'perm':
 
 elif args.action == 'dmain':
     if (not args.name):
-        raise Exception('Le nom de la plateforme est requis. "ecoles-base" pour toutes les ecoles"')
+        raise Exception('Le nom de la plateforme est requis. "ecoles-base" pour toutes les ecoles')
+
     if args.name == 'ecoles-base':
         platforms = get_installed_platforms()
 
         for platform in platforms:
             claroline_console(platform, 'claroline:maintenance:disable')
+
+elif args.action == 'emain':
+    if (not args.name):
+        raise Exception('Le nom de la plateforme est requis. "ecoles-base" pour toutes les ecoles')
+
+    if args.name == 'ecoles-base':
+        platforms = get_installed_platforms()
+
+        for platform in platforms:
+            claroline_console(platform, 'claroline:maintenance:enable')
 else:
     print "Parametres incorrects"
 

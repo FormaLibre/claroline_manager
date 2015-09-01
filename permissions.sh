@@ -12,7 +12,7 @@ chmod 0770 $1/app/config/platform_options.yml
 chmod -R 0770 $1/app/logs
 chmod 0770 $1/composer.json
 chmod 0770 $1/composer.lock
-chmod 0770 $1/files
+chmod 0770 -R $1/files
 chmod -R 0775 $1/vendor
 chmod 0755 $1/web
 chmod -R 0775 $1/web/bundles
