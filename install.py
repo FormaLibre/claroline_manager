@@ -28,6 +28,8 @@ help_action = """
     test:    Test si une plateforme existe. \n
     emain:   Enable the maintenance mode. \n
     dmain:   Remove the maintenance mode. \n
+    assets:  Dump the assets. \n
+    warm:    Warm the cache.\n
 """
 
 help_nom = """
@@ -305,6 +307,29 @@ elif args.action == 'emain':
 
         for platform in platforms:
             claroline_console(platform, 'claroline:maintenance:enable')
+
+elif args.action == 'assets':
+    if (not args.name):
+        raise Exception('Le nom de la plateforme est requis. "ecoles-base" pour toutes les ecoles')
+         
+    if args.name == 'ecoles-base':
+        platforms = get_installed_platforms()
+
+        for platform in platforms:
+            os.chdir(platform['user_home'] + 'claroline')
+            claroline_console(platform, 'assets:install')  
+
+elif args.action == 'warm':
+    if (not args.name):
+        raise Exception('Le nom de la plateforme est requis. "ecoles-base" pour toutes les ecoles')
+
+    if args.name == 'ecoles-base':
+        platforms = get_installed_platforms()
+
+        for platform in platforms:
+            os.chdir(platform['user_home'] + 'claroline')
+            claroline_console(platform, 'assets:install')
+
 else:
     print "Parametres incorrects"
 
