@@ -23,6 +23,7 @@ help_action = """
     install: Installe une plateforme. \n
     backup:  Genere le backup de toutes les plateforme. \n
     update:  Met a jour toutes les plateformes - attention au symlink. \n  
+    update-light:  Met a jour toutes les plateformes - attention au symlink. \n  
     restore: Restore une plateforme. \n
     perm:    Set the permissions. \n
     test:    Test si une plateforme existe. \n
@@ -88,7 +89,7 @@ def backup_files(platform):
 
     exclude = '-x ' + '"' + platform['user_home'] + 'claroline/app/logs/*" ' + '"' + platform['user_home'] + 'claroline/app/cache/*" '
     command += exclude
-    command += backup_directory + '/' + zip_name
+    command += '--out ' + backup_directory + '/' + zip_name
     print command
     os.system(command)
 
@@ -118,6 +119,18 @@ def update_claroline(platform):
     #claroline_console(platform, 'cache:warm')
     claroline_console(platform, 'claroline:update')
     claroline_console(platform, 'assets:install')
+
+def update_claroline_light(platform):
+    os.chdir(platform['user_home'] + 'claroline')
+    print 'Updating platform ' + platform['name'] + '...'
+    print 'php ' + platform['user_home'] + 'claroline/vendor/sensio/distribution-bundle/Sensio/Bundle/DistributionBundle/Resources/bin/build_bootstrap.php'
+    #claroline_console(platform, 'cache:clear')
+    command = 'rm -rf ' + platform['user_home'] + 'claroline/app/cache/*'
+    print command
+    os.system(command)
+    #claroline_console(platform, 'cache:warm')
+    #claroline_console(platform, 'claroline:update')
+    #claroline_console(platform, 'assets:install')
 
 ######################################################################################################################################
 ######################################################################################################################################
@@ -259,7 +272,7 @@ elif args.action == 'update':
 
         update_composer(base)
 
-        print 'Copying operations.xml and bundles.ini...'
+        #print 'Copying operations.xml and bundles.ini...'
 
         for platform in platforms:
             os.system('cp ' + base['user_home'] + 'claroline/app/config/operations.xml ' + platform['user_home'] + 'claroline/app/config/operations.xml')
@@ -267,6 +280,32 @@ elif args.action == 'update':
 
         for platform in platforms:
             update_claroline(platform)
+
+################
+# UPDATE LIGHT #
+################
+
+elif args.action == 'update-light':
+    if (not args.name):
+        raise Exception('Le nom de la plateforme est requis. "ecoles-base" pour toutes les ecoles"')
+
+    if args.name == 'ecoles-base':
+        platforms = get_installed_platforms()
+        base = get_installed_platform('ecoles-base')
+
+        for platform in platforms:
+            claroline_console(platform, 'claroline:maintenance:enable')
+
+        update_composer(base)
+
+        #print 'Copying operations.xml and bundles.ini...'
+
+        for platform in platforms:
+            os.system('cp ' + base['user_home'] + 'claroline/app/config/operations.xml ' + '/root/install-script/tmp/')
+            os.system('cp ' + base['user_home'] + 'claroline/app/config/bundles.ini ' + platform['user_home'] + 'claroline/app/config/bundles.ini')
+
+        for platform in platforms:
+            update_claroline_light(platform)
 
 ###############
 # PERMISSIONS #
@@ -328,7 +367,21 @@ elif args.action == 'warm':
 
         for platform in platforms:
             os.chdir(platform['user_home'] + 'claroline')
-            claroline_console(platform, 'assets:install')
+            #os.system('rm -rf app/cache/*')
+            claroline_console(platform, 'cache:warm --env=prod')
+            os.system('chown -R www-data:www-data app/cache')
+            os.system('chmod -R 0777 app/cache')
+
+elif args.action == 'custom':
+    if (not args.name):
+        raise Exception('Le nom de la plateforme est requis. "ecoles-base" pour toute les ecoles')
+
+    if args.name == 'ecoles-base':
+        platforms = get_installed_platforms()
+
+        for platform in platforms:
+            os.chdir(platform['user_home'] + 'claroline')
+            claroline_console(platform, 'claroline:update')
 
 else:
     print "Parametres incorrects"
