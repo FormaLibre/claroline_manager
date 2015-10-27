@@ -31,8 +31,8 @@ You can install them with apt-get
 - edit the platform_options.yml.dist and masters.yml.dist file and run the init command. 
 
 #### ADDING A PLATFORM TO THE MANAGED PLATFORMS
-- cp platform.yml.dist /platforms/MY_PLATFORM.yml
-- set the required values (claroline_root, db_name, db_pwd - the others aren't required)
+- cp platform.yml.dist /platforms/PLATFORM_NAME.yml
+- set the required values (claroline_root, db_name, db_pwd, name - the others aren't required)
 
 #### UPDATING 
 - sudo python claroline.py update --name=PLATFORM_NAME
