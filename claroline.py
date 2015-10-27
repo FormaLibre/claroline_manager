@@ -427,7 +427,7 @@ elif args.action == 'check-configs':
             if (platform['name'] == args.name):
                 platform['claroline_root'] = None
             else:
-                platform['claroline_root'] = platform['user_home'] + '/claroline'
+                platform['claroline_root'] = platform['user_home'] + 'claroline/'
         if (not 'base_platform' in platform):
             platform['base_platform'] = args.name 
         
