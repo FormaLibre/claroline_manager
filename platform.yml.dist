@@ -1,0 +1,9 @@
+---
+base_platform: null
+claroline_root: /path/to/root/
+db_name: db_name
+db_pwd: pwd
+ecole_admin_pwd: ~
+name: ~
+token: ~
+user_home: ~

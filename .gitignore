@@ -1,6 +1,6 @@
 tmp/*
-install.yml
-plateforms/*
+claroline.yml
+platforms/*
 backups/*
 operations/*
 masters.yml.dist

@@ -7,20 +7,20 @@ import sys
 import argparse
 import datetime
 
-	
 __FILE__ = os.path.realpath(__file__)
-__DIR__ = os.path.dirname(__FILE__)
+__DIR__  = os.path.dirname(__FILE__)
+__DATE__ = str(datetime.datetime.now().strftime('%Y-%d-%m'))
 
-with open('install.yml') as stream:
+with open('claroline.yml') as stream:
     parameters = yaml.load(stream)
 
-claro_admin_pwd = parameters['claro_admin_pwd']
-mysql_root_pwd = parameters['mysql_root_pwd']
-backup_directory = __DIR__ + '/backups'
-platform_dir = __DIR__ + '/platforms'
-operations_dir = __DIR__ + '/operations'
+claro_admin_pwd    = parameters['claro_admin_pwd']
+mysql_root_pwd     = parameters['mysql_root_pwd']
+backup_directory   = __DIR__ + '/backups'
+platform_dir       = __DIR__ + '/platforms'
+operations_dir     = __DIR__ + '/operations'
 permissions_script = __DIR__ + '/permissions.sh'
-webserver = parameters['webserver']
+webserver          = parameters['webserver']
 
 help_action = """
     This script should be used as root. Be carreful.
@@ -30,7 +30,7 @@ help_action = """
     create:       Create the platform datatree. \n
     install:      Install a platform. \n
     backup:       Generates a backup. \n
-    remove:		  Removes a platform. \n
+    remove:	  Removes a platform. \n
     update:       Update a platform (warning: be carefull of symlinks if you use them). \n  
     update-light: Update a platform without claroline:update (warning: be carefull of symlinks if you use them). \n  
     restore:      Restore a platform - not implemented yet. \n
@@ -77,71 +77,68 @@ def get_installed_platform(name):
            
 def get_child_platforms(name):
     base = get_installed_platform(name)
-    if (base['base_platform'] != None):
-        print 'Please run the action ' + args.action + ' on the ' + base['base_platform'] + ' instead.'
-        raise Exception('The platform ' + name + ' uses ' + base['base_platform'] + ' as base with symlink.')
     
-	platforms = []
-	platform = get_installed_platforms()
-	for platform in platforms:
-		if platform['base_platform'] != None and platform['base_platform'] == name:
-			platforms.append(platform)
-	
-	return platforms
+    if (base['base_platform'] != None):
+        print 'Please run the action ' + args.action + ' on the ' + base['base_platform'] + ' platform instead.'
+        raise Exception('The platform ' + name + ' uses ' + base['base_platform'] + ' as base with symlink.')
+
+    platforms = []
+    installed = get_installed_platforms()
+
+    for platform in installed:
+        if platform['base_platform'] != None and platform['base_platform'] == name:
+            platforms.append(platform)
+
+    platforms.append(base)
+    return platforms
 
 def claroline_console(name, command):
-    command = 'php ' + platform['user_home'] + 'claroline/app/console ' + command
+    command = 'php ' + platform['claroline_root'] + 'app/console ' + command
     print command
     os.system(command)
 
 def backup_sources(platform):
-    print 'Backing up sources...'
     name = platform['name']
-    date = str(datetime.datetime.now().strftime('%Y-%d-%m'))
-    zip_name = name + '@' + date + '.source.zip'
-    command = 'zip -r ' + backup_directory + '/' + zip_name + ' ' + platform['user_home'] + 'claroline/vendor'
-    print command
+    print 'Backing up sources for ' + name +'...'
+    zip_name = name + '@' + __DATE__ + '.source.zip'
+    command = 'zip -r -q ' + backup_directory + '/' + zip_name + ' ' + platform['claroline_root'] + 'vendor'
     os.system(command)
 
 def backup_files(platform):
-    print 'backing up the platform files...'
-    directories = ['web', 'files', 'bin', 'app']
     name = platform['name']
-    date = str(datetime.datetime.now().strftime('%Y-%d-%m'))
-    zip_name = name + '@' + date + '.file.zip'
-    command = 'zip -r '
+    print 'backing up the platform files for ' + name + '...'
+    directories = ['web', 'files', 'bin', 'app']
+    zip_name = name + '@' + __DATE__ + '.file.zip'
+    command = 'zip -r -q '
+    command += backup_directory + '/' + zip_name + ' '
 
     for directory in directories:
-        command += platform['user_home'] + 'claroline/' + directory + ' '
+        command += platform['claroline_root'] + directory + ' '
 
-    exclude = '-x ' + '"' + platform['user_home'] + 'claroline/app/logs/*" ' + '"' + platform['user_home'] + 'claroline/app/cache/*" '
+    exclude = '-x ' + '"' + platform['claroline_root'] + 'app/logs" ' + '"' + platform['claroline_root'] + 'app/cache" '
     command += exclude
-    command += '--out ' + backup_directory + '/' + zip_name
-    print command
     os.system(command)
 
 def backup_database(platform):
     name = platform['db_name']
-    date = str(datetime.datetime.now().strftime('%Y-%d-%m'))
     print 'Backing up the database for ' + name + '...'
-    sql_file = name + '@' + date + '.sql'
+    sql_file = name + '@' + __DATE__ + '.sql'
     backup_file = backup_directory + '/' + sql_file
     command = "mysqldump --opt --databases " + name + "_prod -u " + name + " --password='" + platform['db_pwd'] + "' > " + backup_file
-    print command
     os.system(command)
 
 def update_composer(platform):
     print 'Starting composer...'
     os.chdir(platform['claroline_root'])
     os.system('composer update --prefer-dist --no-dev')
-    os.system('cp app/config/operations.xml ' + 
+    os.system('cp app/config/operations.xml ' + operations_dir + '/operations-' + args.name + '-' + __DATE__ + '.yml')
 
 def update_claroline(platform):
-    os.chdir(platform['user_home'] + 'claroline')
+    os.chdir(platform['claroline_root'])
     print 'Updating platform ' + platform['name'] + '...'
-    print 'php ' + platform['user_home'] + 'claroline/vendor/sensio/distribution-bundle/Sensio/Bundle/DistributionBundle/Resources/bin/build_bootstrap.php'
+    print 'php ' + platform['claroline_root'] + 'vendor/sensio/distribution-bundle/Sensio/Bundle/DistributionBundle/Resources/bin/build_bootstrap.php'
     #claroline_console(platform, 'cache:clear')
-    command = 'rm -rf ' + platform['user_home'] + 'claroline/app/cache/*'
+    command = 'rm -rf ' + platform['claroline_root'] + 'app/cache/*'
     print command
     os.system(command)
     #claroline_console(platform, 'cache:warm')
@@ -149,10 +146,10 @@ def update_claroline(platform):
     claroline_console(platform, 'assets:install')
 
 def update_claroline_light(platform):
-    os.chdir(platform['user_home'] + 'claroline')
+    os.chdir(platform['claroline_root'])
     print 'Updating platform ' + platform['name'] + '...'
-    print 'php ' + platform['user_home'] + 'claroline/vendor/sensio/distribution-bundle/Sensio/Bundle/DistributionBundle/Resources/bin/build_bootstrap.php'
-    command = 'rm -rf ' + platform['user_home'] + 'claroline/app/cache/*'
+    print 'php ' + platform['claroline_root'] + 'vendor/sensio/distribution-bundle/Sensio/Bundle/DistributionBundle/Resources/bin/build_bootstrap.php'
+    command = 'rm -rf ' + platform['claroline_root'] + 'app/cache/*'
     print command
     os.system(command)
 
@@ -165,17 +162,19 @@ if args.action == "init":
     os.system('mkdir -p ' + platform_dir)
     os.system('mkdir ' + __DIR__ + '/tmp')
     os.system('mkdir -p ' + operations_dir)
+    os.system('cp ' + __DIR__ + '/platform_options.yml.dist ' + __DIR__ + '/skel/claroline/app/config/platform_options.yml')
+    os.system('cp ' + __DIR__ + '/masters.yml.dist ' + __DIR__ + '/skel/claroline/app/config/masters.yml')
     #touch
     open(__DIR__ + '/.init', 'a').close()
     print 'You may want to edit the base composer file in the /skel directory.'
     print 'You might want to run this script with the check-configs action (see --help)' 
+    print 'You might need to set up a github authentication token during the install or update operations the first time'
     sys.exit()
     
 ### CHECKS IF THE SCRIPT WAS INITIALIZED
 
 if (not os.path.exists(__DIR__ + '/.init')):
     print 'Please initialize this script [init].'
-
     sys.exit()
 
 ### THE NAME IS REQUIRED FOR EVERY ACTION
@@ -210,9 +209,8 @@ if args.action == "param":
     if (not args.symlink):
         print 'No symlink for ' + args.name + '.'
     else:
-        print 'Symlinked to ' + args.symlink
+        print 'Symlinked to ' + args.symlink + '.'
         
-
 ### CREATE
 
 elif args.action == "create":
@@ -281,6 +279,10 @@ elif args.action == "install":
     claroline_console(platform,  "claroline:user:create -a Admin " + platform["name"] + " " + platform["name"] + "Admin " + platform["ecole_admin_pwd"] + ' some_other_email')
     #uncomment the following line if you want to fire the permission script
     #os.system("bash " + __DIR__ + "/permissions.sh " + platform["claroline_root"]")
+    
+    operationsPath = platform['claroline_root'] + 'app/config/operations.xml'
+    if os.path.exists(operationsPath):
+        os.remove(operationsPath)
 
 ### BACKUP
 
@@ -292,9 +294,8 @@ elif args.action == 'backup':
         backup_database(platform)
 
     backup_sources(get_installed_platform(args.name))
-    date = str(datetime.datetime.now().strftime('%Y-%d-%m'))
-    os.system('mkdir -p ' + backup_directory + '/tmp/' + date)
-    os.system('mv ' + backup_directory + '/tmp/*' + backup_directory + '/tmp/' + date + '/')
+    os.system('mkdir -p ' + backup_directory + '/tmp/' + __DATE__)
+    os.system('mv ' + backup_directory + '/tmp/* ' + backup_directory + '/tmp/' + __DATE__ + '/')
 
 ### UPDATE
 
@@ -310,7 +311,7 @@ elif args.action == 'update':
     #print 'Copying operations.xml and bundles.ini...'
     for platform in platforms:
         os.system('cp ' + base['claroline_root'] + 'app/config/operations.xml ' + platform['claroline_root'] + 'app/config/operations.xml')
-        os.system('cp ' + base['user_home'] + 'app/config/bundles.ini ' + platform['claroline_root'] + 'app/config/bundles.ini')
+        os.system('cp ' + base['claroline_root'] + 'app/config/bundles.ini ' + platform['claroline_root'] + 'app/config/bundles.ini')
 
     for platform in platforms:
         update_claroline(platform)
@@ -423,13 +424,16 @@ elif args.action == 'check-configs':
     
     for platform in platforms:
         if (not 'claroline_root' in platform):
-            platform['claroline_root'] = platform['user_home'] + '/claroline'
+            if (platform['name'] == args.name):
+                platform['claroline_root'] = None
+            else:
+                platform['claroline_root'] = platform['user_home'] + '/claroline'
         if (not 'base_platform' in platform):
             platform['base_platform'] = args.name 
         
-    data_yaml = yaml.dump(data, explicit_start = True, default_flow_style=False)
-    paramFile = open(platform_dir + "/" + args.name + ".yml", 'w+')
-    paramFile.write(data_yaml)
+        data_yaml = yaml.dump(platform, explicit_start = True, default_flow_style=False)
+        paramFile = open(platform_dir + "/" + platform['name'] + ".yml", 'w')
+        paramFile.write(data_yaml)
 
 ### CUSTOM
 
