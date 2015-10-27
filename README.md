@@ -3,14 +3,15 @@
 /!\ warning: this script should be used as root for the moment /!\
 
 #### REQUIREMENTS
-- python
+- python (and some basics python libs I can't remember)
 - apg
 - zip
+- git
 
 You can install them with apt-get
 
 #### INSTALLATION
-- clone this repository
+- git clone https://github.com/FormaLibre/claroline_manager.git
 - cp claroline.yml.dist claroline.yml 
 - set a value for the claro_admin_pwd and set your mysql root password in the other field
 - sudo python claroline.py init //this will create the basic directory structure
