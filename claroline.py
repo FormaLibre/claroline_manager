@@ -250,8 +250,8 @@ elif args.action == "create":
     output.write(clean)
     mysql_cmd = "mysql -u root "
     if (mysql_root_pwd != None):
-        mysql_cmd += "-p'" + mysql_root_pwd + " "
-    mysql_cmd += ' -e "' + clean + '"'
+        mysql_cmd += "-p'" + mysql_root_pwd + "' "
+    mysql_cmd += '-e "' + clean + '"'
     os.system(mysql_cmd)
 
     if (platform['base_platform'] != None):
