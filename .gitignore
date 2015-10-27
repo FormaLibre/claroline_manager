@@ -3,4 +3,8 @@ install.yml
 plateforms/*
 backups/*
 operations/*
+masters.yml.dist
+platform_options.yml.dist
+skel/claroline/app/config/platform_options.yml
+skel/claroline/app/config/masters.yml
 
