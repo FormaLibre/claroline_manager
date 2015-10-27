@@ -391,10 +391,10 @@ elif args.action == 'warm':
 elif args.action == 'remove':
     os.system('userdel -r ' + args.name)
     #remove the database
-    cmd = "mysql -u root "
+    cmd = "mysql -u root"
     if (mysql_root_pwd != None):
-        cmd += "-p'" + mysql_root_pwd + " "
-    cmd += "-e 'drop database " + args.name + "_prod;drop user '" + args.name + "'@'localhost';'"
+        cmd += " -p'" + mysql_root_pwd + "'"
+    cmd += " -e 'drop database " + args.name + "_prod;drop user '" + args.name + "'@'localhost';'"
     #print 'You probably want to execute the following command manually - this script does not fire it for some reason'
     print cmd
     os.system(cmd)
