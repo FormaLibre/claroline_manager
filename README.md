@@ -26,6 +26,9 @@ You can install them with apt-get
 - sudo python claroline.py param --name=PLATFORM_NAME --symlink=BASE_PLATFORM
 - sudo python claroline.py create --name=PLATFORM_NAME
 - sudo python claroline.py install --name=PLATFORM_NAME
+ 
+#### CUSTOMIZING INSTALLATION
+- edit the platform_options.yml.dist and masters.yml.dist file and run the init command. 
 
 #### ADDING A PLATFORM TO THE MANAGED PLATFORMS
 - cp platform.yml.dist /platforms/MY_PLATFORM.yml
@@ -39,3 +42,7 @@ You can install them with apt-get
 
 #### REMOVE
 - sudo python claroline.py remove --name=PLATFORM_NAME
+
+### TODO
+- hooks
+- debug
