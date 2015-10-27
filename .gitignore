@@ -1,3 +1,6 @@
 tmp/*
 install.yml
-plateformes/*
+plateforms/*
+backups/*
+operations/*
+
