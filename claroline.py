@@ -424,12 +424,12 @@ elif args.action == 'check-configs':
     
     for platform in platforms:
         if (not 'claroline_root' in platform):
-            if (platform['name'] == args.name):
-                platform['claroline_root'] = None
-            else:
-                platform['claroline_root'] = platform['user_home'] + 'claroline/'
+            platform['claroline_root'] = platform['user_home'] + 'claroline/'
         if (not 'base_platform' in platform):
-            platform['base_platform'] = args.name 
+            if (platform['name'] == args.name):
+                platform['base_platform'] = None
+            else:
+                platform['base_platform'] = args.name 
         
         data_yaml = yaml.dump(platform, explicit_start = True, default_flow_style=False)
         paramFile = open(platform_dir + "/" + platform['name'] + ".yml", 'w')
