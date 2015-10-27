@@ -402,8 +402,7 @@ elif args.action == 'remove':
     if (webserver == 'apache'):
         if os.path.exists("/etc/apache2/sites-available/" + args.name + ".conf"):
             os.remove("/etc/apache2/sites-available/" + args.name + ".conf")
-        if os.path.exists("/etc/apache2/sites-enabled/" + args.name + ".conf"): 
-            os.remove("/etc/apache2/sites-enabled/" + args.name + ".conf")
+        os.system("a2dissite " + args.name)
     else:
         print('The server ' + args.webserver + ' is not supported yet.')
         
