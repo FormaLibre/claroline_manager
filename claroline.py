@@ -25,9 +25,9 @@ webserver          = parameters['webserver']
 help_action = """
     This script should be used as root. Be carreful.
 
-    init:         Initialize the temporary directories for this script
-    param:        Create a new file containing a platform installation parameters. \n
-    create:       Create the platform datatree. \n
+    init:         Initialize the temporary directories for this script. \n
+    param:        Create a new file containing a platform installation parameters (see the platforms directory). \n
+    create:       Create the platform datatree (with symlink or runs composer). This will also add a new database, a new database user, a new user and a new vhost.\n
     install:      Install a platform. \n
     backup:       Generates a backup. \n
     remove:	  Removes a platform. \n
