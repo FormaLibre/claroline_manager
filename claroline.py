@@ -17,6 +17,7 @@ with open('claroline.yml') as stream:
 claro_admin_pwd    = parameters['claro_admin_pwd']
 mysql_root_pwd     = parameters['mysql_root_pwd']
 backup_directory   = __DIR__ + '/backups'
+backup_tmp         = backup_directory + '/tmp'
 platform_dir       = __DIR__ + '/platforms'
 operations_dir     = __DIR__ + '/operations'
 permissions_script = __DIR__ + '/permissions.sh'
@@ -41,7 +42,7 @@ help_action = """
     warm:         Warm the cache.\n
 """
 
-help_nom = """
+help_name = """
     The platform name.
 """
 
@@ -49,10 +50,15 @@ help_symlink = """
     The platform name you want to symlink the vendor directory (only valid for the param action).
 """
 
+help_restore = """
+    The folder you want to restore in /backups
+"""
+
 parser = argparse.ArgumentParser("Allow you to manage claroline platforms.", formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("action", help=help_action)
-parser.add_argument('-n', '--name', help=help_nom)
+parser.add_argument('-n', '--name', help=help_name)
 parser.add_argument('-s', '--symlink', help=help_symlink)
+parser.add_argument('-r', '--restore', help=help_restore)
 args = parser.parse_args()
 
 #############
@@ -101,7 +107,7 @@ def backup_sources(platform):
     name = platform['name']
     print 'Backing up sources for ' + name +'...'
     zip_name = name + '@' + __DATE__ + '.source.zip'
-    command = 'zip -r -q ' + backup_directory + '/' + zip_name + ' ' + platform['claroline_root'] + 'vendor'
+    command = 'zip -r -q ' + backup_tmp + '/' + zip_name + ' ' + platform['claroline_root'] + 'vendor'
     os.system(command)
 
 def backup_files(platform):
@@ -110,7 +116,7 @@ def backup_files(platform):
     directories = ['web', 'files', 'bin', 'app']
     zip_name = name + '@' + __DATE__ + '.file.zip'
     command = 'zip -r -q '
-    command += backup_directory + '/' + zip_name + ' '
+    command += backup_tmp + '/' + zip_name + ' '
 
     for directory in directories:
         command += platform['claroline_root'] + directory + ' '
@@ -123,7 +129,7 @@ def backup_database(platform):
     name = platform['db_name']
     print 'Backing up the database for ' + name + '...'
     sql_file = name + '@' + __DATE__ + '.sql'
-    backup_file = backup_directory + '/' + sql_file
+    backup_file = backup_tmp + '/' + sql_file
     command = "mysqldump --opt --databases " + name + "_prod -u " + name + " --password='" + platform['db_pwd'] + "' > " + backup_file
     os.system(command)
 
@@ -153,69 +159,69 @@ def update_claroline_light(platform):
     print command
     os.system(command)
 
-################################
-# THIS IS WHERE THE FUN BEGINS #
-################################
+##########
+# REMOVE #
+##########
 
-if args.action == "init":
-    os.system('mkdir -p ' + backup_directory)
-    os.system('mkdir -p ' + platform_dir)
-    os.system('mkdir ' + __DIR__ + '/tmp')
-    os.system('mkdir -p ' + operations_dir)
-    os.system('cp ' + __DIR__ + '/platform_options.yml.dist ' + __DIR__ + '/skel/claroline/app/config/platform_options.yml')
-    os.system('cp ' + __DIR__ + '/masters.yml.dist ' + __DIR__ + '/skel/claroline/app/config/masters.yml')
-    #touch
-    open(__DIR__ + '/.init', 'a').close()
-    print 'You may want to edit the base composer file in the /skel directory.'
-    print 'You might want to run this script with the check-configs action (see --help)' 
-    print 'You might need to set up a github authentication token during the install or update operations the first time'
-    sys.exit()
-    
-### CHECKS IF THE SCRIPT WAS INITIALIZED
+def remove(name):
+    os.system('userdel -r ' + name)
+    #remove the database
+    cmd = "mysql -u root"
+    if (mysql_root_pwd != None):
+        cmd += " -p'" + mysql_root_pwd + "'"
+    cmd += " -e 'drop database " + name + "_prod;drop user '" + name + "'@'localhost';'"
+    #print 'You probably want to execute the following command manually - this script does not fire it for some reason'
+    print cmd
+    os.system(cmd)
+    #remove the vhost
+    if (webserver == 'apache'):
+        if os.path.exists("/etc/apache2/sites-available/" + name + ".conf"):
+            os.remove("/etc/apache2/sites-available/" + name + ".conf")
+        os.system("a2dissite " + name)
+    else:
+        print('The server ' + webserver + ' is not supported yet.')
+        
+    #remove the platform
+    if os.path.exists(platform_dir + '/' + name + '.yml'):
+        os.remove(platform_dir + '/' + name + '.yml')
 
-if (not os.path.exists(__DIR__ + '/.init')):
-    print 'Please initialize this script [init].'
-    sys.exit()
+#########
+# PARAM #
+#########
 
-### THE NAME IS REQUIRED FOR EVERY ACTION
-
-if (not args.name):
-	raise Exception('The platform name is required.')
-
-### PARAM
-
-if args.action == "param":
-    if (args.symlink and not get_installed_platform(args.symlink)):
-		raise Exception('The base platform ' + args.symlink + ' doesn''t exists.')
+def param(name, symlink):
+    if (symlink and not get_installed_platform(symlink)):
+        raise Exception('The base platform ' + symlink + ' doesn''t exists.')
 	
     db_pwd_gen = os.popen("apg -a 1 -m 25 -n 1 -MCLN").read().rstrip()
     token_gen = os.popen("apg -a 1 -m 50 -n 1 -MCLN").read().rstrip()
     ecole_admin_pwd_gen = os.popen('apg -a 0 -m 12 -x 12 -n 1 -MCLN').read().rstrip()
     data = dict(
-            name = args.name,
-            user_home = '/home/' + args.name + '/',
-            claroline_root = '/home/' + args.name + '/claroline/',
-            db_name = args.name,
+            name = name,
+            user_home = '/home/' + name + '/',
+            claroline_root = '/home/' + name + '/claroline/',
+            db_name = name,
             db_pwd = db_pwd_gen,
             token = token_gen,
             ecole_admin_pwd = ecole_admin_pwd_gen,
-            base_platform = args.symlink
+            base_platform = symlink
         )
 
     data_yaml = yaml.dump(data, explicit_start = True, default_flow_style=False)
-    paramFile = open(platform_dir + "/" + args.name + ".yml", 'w+')
+    paramFile = open(platform_dir + "/" + name + ".yml", 'w+')
     paramFile.write(data_yaml)
     
     if (not args.symlink):
-        print 'No symlink for ' + args.name + '.'
+        print 'No symlink for ' + name + '.'
     else:
-        print 'Symlinked to ' + args.symlink + '.'
-        
-### CREATE
+        print 'Symlinked to ' + symlink + '.'
 
-elif args.action == "create":
-    
-    platform = get_installed_platform(args.name)
+##########
+# CREATE #
+##########
+
+def create(name):
+    platform = get_installed_platform(name)
     # Create user and user home from skel
     cmd = "useradd --system --create-home --skel " + __DIR__ + "/skel/ " + platform["name"]
     os.system(cmd)
@@ -229,7 +235,7 @@ elif args.action == "create":
 		output.write(clean)
 		os.system("a2ensite " + platform["name"])
 		
-    elif args.webserver == 'nginx':
+    elif webserver == 'nginx':
 		print 'nginx is not supported yet. Please create your vhost manually or make a pr at https://github.com/FormaLibre/claroline_manager to handle this webserver.'
     else:
 		print 'The webserver ' + args.webserver + ' is unknwown.'
@@ -265,11 +271,13 @@ elif args.action == "create":
         print os.system(cmd)
     
     print platform["name"] + " created !"
+    
+###########
+# INSTALL #
+###########
 
-### INSTALL
-
-elif args.action == "install":
-    platform = get_installed_platform(args.name)
+def install(name):
+    platform = get_installed_platform(name)
     print 'cd ' + platform['claroline_root']
     os.chdir(platform['claroline_root'])
     claroline_console(platform, "claroline:install")
@@ -284,6 +292,53 @@ elif args.action == "install":
     if os.path.exists(operationsPath):
         os.remove(operationsPath)
 
+################################
+# THIS IS WHERE THE FUN BEGINS #
+################################
+
+if args.action == "init":
+    os.system('mkdir -p ' + backup_directory)
+    os.system('mkdir -p ' + platform_dir)
+    os.system('mkdir ' + __DIR__ + '/tmp')
+    os.system('mkdir -p ' + operations_dir)
+    os.system('cp ' + __DIR__ + '/platform_options.yml.dist ' + __DIR__ + '/skel/claroline/app/config/platform_options.yml')
+    os.system('cp ' + __DIR__ + '/masters.yml.dist ' + __DIR__ + '/skel/claroline/app/config/masters.yml')
+    #touch
+    open(__DIR__ + '/.init', 'a').close()
+    print 'You may want to edit the base composer file in the /skel directory.'
+    print 'You might want to run this script with the check-configs action (see --help)' 
+    print 'You might need to set up a github authentication token during the install or update operations the first time'
+    sys.exit()
+    
+### CHECKS IF THE SCRIPT WAS INITIALIZED
+
+if (not os.path.exists(__DIR__ + '/.init')):
+    print 'Please initialize this script [init].'
+    sys.exit()
+
+### THE NAME IS REQUIRED FOR EVERY ACTION
+
+if (not args.name):
+	raise Exception('The platform name is required.')
+
+if args.action == "param":
+    param(args.name, args.symlink)
+    
+elif args.action == "create":
+    create(args.name)
+
+elif args.action == "install":
+    install(args.name)
+    
+elif args.action == 'remove':
+    remove(args.name)
+
+elif args.action == 'restore':
+    #first we remove the existing platform
+    remove(args.name)
+    
+    restore(args.name)
+    
 ### BACKUP
 
 elif args.action == 'backup':
@@ -294,8 +349,8 @@ elif args.action == 'backup':
         backup_database(platform)
 
     backup_sources(get_installed_platform(args.name))
-    os.system('mkdir -p ' + backup_directory + '/tmp/' + __DATE__)
-    os.system('mv ' + backup_directory + '/tmp/* ' + backup_directory + '/tmp/' + __DATE__ + '/')
+    os.system('mkdir -p ' + backup_directory + '/' + __DATE__)
+    os.system('mv ' + backup_tmp + '/* ' + backup_directory + '/' + __DATE__ + '/')
 
 ### UPDATE
 
@@ -350,7 +405,6 @@ elif args.action == 'perm':
 
 elif args.action == 'dmain':
     platforms = get_child_platforms(args.name)
-    platforms = get_installed_platforms()
 
     for platform in platforms:
         claroline_console(platform, 'claroline:maintenance:disable')
@@ -359,7 +413,6 @@ elif args.action == 'dmain':
 
 elif args.action == 'emain':
     platforms = get_child_platforms(args.name)
-    platforms = get_installed_platforms()
 
     for platform in platforms:
         claroline_console(platform, 'claroline:maintenance:enable')
@@ -368,7 +421,6 @@ elif args.action == 'emain':
 
 elif args.action == 'assets':
     platforms = get_child_platforms(args.name)
-    platforms = get_installed_platforms()
 
     for platform in platforms:
         os.chdir(platform['claroline_root'])
@@ -378,42 +430,12 @@ elif args.action == 'assets':
 
 elif args.action == 'warm':
     platforms = get_child_platforms(args.name)
-    platforms = get_installed_platforms()
 
     for platform in platforms:
         os.chdir(platform['claroline_root'])
         claroline_console(platform, 'cache:warm --env=prod')
         os.system('chown -R www-data:www-data app/cache')
         os.system('chmod -R 0777 app/cache')
-
-### REMOVE
-
-elif args.action == 'remove':
-    os.system('userdel -r ' + args.name)
-    #remove the database
-    cmd = "mysql -u root"
-    if (mysql_root_pwd != None):
-        cmd += " -p'" + mysql_root_pwd + "'"
-    cmd += " -e 'drop database " + args.name + "_prod;drop user '" + args.name + "'@'localhost';'"
-    #print 'You probably want to execute the following command manually - this script does not fire it for some reason'
-    print cmd
-    os.system(cmd)
-    #remove the vhost
-    if (webserver == 'apache'):
-        if os.path.exists("/etc/apache2/sites-available/" + args.name + ".conf"):
-            os.remove("/etc/apache2/sites-available/" + args.name + ".conf")
-        os.system("a2dissite " + args.name)
-    else:
-        print('The server ' + args.webserver + ' is not supported yet.')
-        
-    #remove the platform
-    if os.path.exists(platform_dir + '/' + args.name + '.yml'):
-        os.remove(platform_dir + '/' + args.name + '.yml')
-
-### RESTORE
-
-elif args.action == 'restore':
-    print 'not implemented yet'
     
 ### CHECK_CONFIGS
 
