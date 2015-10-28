@@ -26,20 +26,23 @@ webserver          = parameters['webserver']
 help_action = """
     This script should be used as root. Be carreful.
 
-    init:         Initialize the temporary directories for this script. \n
-    param:        Create a new file containing a platform installation parameters (see the platforms directory). \n
-    create:       Create the platform datatree (with symlink or runs composer). This will also add a new database, a new database user, a new user and a new vhost.\n
-    install:      Install a platform. \n
-    backup:       Generates a backup. \n
-    remove:	  Removes a platform. \n
-    update:       Update a platform (warning: be carefull of symlinks if you use them). \n  
-    update-light: Update a platform without claroline:update (warning: be carefull of symlinks if you use them). \n  
-    restore:      Restore a platform - not implemented yet. \n
-    perm:         Fire the permission script for a platform. \n
-    emain:        Enable the maintenance mode. \n
-    dmain:        Remove the maintenance mode. \n
-    assets:       Dump the assets. \n
-    warm:         Warm the cache.\n
+    init:          Initialize the temporary directories for this script. \n
+    param:         Create a new file containing a platform installation parameters (see the platforms directory). \n
+    create:        Create the platform datatree (with symlink or runs composer). This will also add a new database, a new database user, a new user and a new vhost.\n
+    install:       Install a platform. \n
+    build          Fires the param, create and install method for a platform. \n
+    backup:        Generates a backup. \n
+    remove:	   Removes a platform. \n
+    update:        Update a platform (warning: be carefull of symlinks if you use them). \n  
+    update-light:  Update a platform without claroline:update (warning: be carefull of symlinks if you use them). \n  
+    restore:       Restore a platform. \n
+    migrate:       Migrate a platform. \n
+    perm:          Fire the permission script for a platform. \n
+    emain:         Enable the maintenance mode. \n
+    dmain:         Remove the maintenance mode. \n
+    assets:        Dump the assets. \n
+    warm:          Warm the cache.\n
+    drop_database: Drop the database.\n
 """
 
 help_name = """
@@ -47,11 +50,15 @@ help_name = """
 """
 
 help_symlink = """
-    The platform name you want to symlink the vendor directory (only valid for the param action).
+    The platform name you want to symlink the vendor directory (only valid for the [param][build]).
 """
 
 help_restore = """
-    The folder you want to restore in /backups
+    The folder you want to restore in /backups.
+"""
+
+help_remove = """
+    Remove before restoring (only valid for [restore]).
 """
 
 parser = argparse.ArgumentParser("Allow you to manage claroline platforms.", formatter_class=argparse.RawTextHelpFormatter)
@@ -59,11 +66,33 @@ parser.add_argument("action", help=help_action)
 parser.add_argument('-n', '--name', help=help_name)
 parser.add_argument('-s', '--symlink', help=help_symlink)
 parser.add_argument('-r', '--restore', help=help_restore)
+parser.add_argument('-rm', '--remove', help=help_remove, action='store_true')
 args = parser.parse_args()
 
 #############
 # FUNCTIONS #
 #############
+
+def confirm(prompt=None, resp=False):    
+    if prompt is None:
+        prompt = 'Confirm'
+
+    if resp:
+        prompt = '%s [%s]|%s: ' % (prompt, 'y', 'n')
+    else:
+        prompt = '%s [%s]|%s: ' % (prompt, 'n', 'y')
+        
+    while True:
+        ans = raw_input(prompt)
+        if not ans:
+            return resp
+        if ans not in ['y', 'Y', 'n', 'N']:
+            print 'please enter y or n.'
+            continue
+        if ans == 'y' or ans == 'Y':
+            return True
+        if ans == 'n' or ans == 'N':
+            return False
 
 def get_installed_platforms():
     platforms = []
@@ -96,9 +125,15 @@ def get_child_platforms(name):
             platforms.append(platform)
 
     platforms.append(base)
+    print 'The action ' + args.action + ' will be executed on ' + platforms
+    conf = confirm()
+    
+    if not conf:
+        sys.exit()
+    
     return platforms
 
-def claroline_console(name, command):
+def claroline_console(platform, command):
     command = 'php ' + platform['claroline_root'] + 'app/console ' + command
     print command
     os.system(command)
@@ -184,7 +219,7 @@ def remove(name):
     #remove the platform
     if os.path.exists(platform_dir + '/' + name + '.yml'):
         os.remove(platform_dir + '/' + name + '.yml')
-
+    
 #########
 # PARAM #
 #########
@@ -228,12 +263,13 @@ def create(name):
 
 	# Set the web server
     if (webserver == 'apache'):
-		print 'Create the apache vhost'
-		input  = open(__DIR__ + "/files/vhost.conf", 'r')
-		output = open("/etc/apache2/sites-available/" + platform["name"] + ".conf", 'w')
-		clean  = input.read().replace("NEWUSER", platform["name"])
-		output.write(clean)
-		os.system("a2ensite " + platform["name"])
+        print 'Create the apache vhost'
+        input  = open(__DIR__ + "/files/vhost.conf", 'r')
+        output = open("/etc/apache2/sites-available/" + platform["name"] + ".conf", 'w')
+        clean  = input.read().replace("NEWUSER", platform["name"])
+        output.write(clean)
+        os.system("a2ensite " + platform["name"])
+        os.system("service apache2 reload")
 		
     elif webserver == 'nginx':
 		print 'nginx is not supported yet. Please create your vhost manually or make a pr at https://github.com/FormaLibre/claroline_manager to handle this webserver.'
@@ -291,6 +327,42 @@ def install(name):
     operationsPath = platform['claroline_root'] + 'app/config/operations.xml'
     if os.path.exists(operationsPath):
         os.remove(operationsPath)
+        
+###########
+# RESTORE #
+###########
+
+def restore(folder, symlink):
+    restoreFolder = backup_directory + '/' + folder
+
+    if (not os.path.isdir(restoreFolder)):
+        raise Exception(restoreFolder + ' is not a directory.')
+        
+    items = os.listdir(restoreFolder)
+    platforms = []
+    
+    for item in items:
+        platform = item.partition("@")[0]
+        if not platform in platforms:
+            platforms.append(platform)
+            
+            
+    for platform in platforms:
+        if args.remove == True:
+            print 'Please drop the database for ' + platform['name']
+            print 'Please remove the claroline_root for ' + platform['name']
+            
+    print 'Proceed to the restoration ?'
+    conf = confirm()
+    
+    if (not conf):
+        print 'ok we stop'
+    else:
+        print 'ok we continue'
+        
+    sys.exit()
+        
+        
 
 ################################
 # THIS IS WHERE THE FUN BEGINS #
@@ -315,8 +387,14 @@ if args.action == "init":
 if (not os.path.exists(__DIR__ + '/.init')):
     print 'Please initialize this script [init].'
     sys.exit()
-
-### THE NAME IS REQUIRED FOR EVERY ACTION
+    
+if args.action == 'restore':
+    if (not args.restore):
+        raise Exception('The restoration folder is required (--restore=RESTORE_FOLDER).')
+    restore(args.restore, args.symlink)
+    sys.exit()
+    
+### THE NAME IS REQUIRED FOR EVERY OTHER ACTION
 
 if (not args.name):
 	raise Exception('The platform name is required.')
@@ -332,13 +410,7 @@ elif args.action == "install":
     
 elif args.action == 'remove':
     remove(args.name)
-
-elif args.action == 'restore':
-    #first we remove the existing platform
-    remove(args.name)
-    
-    restore(args.name)
-    
+        
 ### BACKUP
 
 elif args.action == 'backup':
@@ -436,6 +508,17 @@ elif args.action == 'warm':
         claroline_console(platform, 'cache:warm --env=prod')
         os.system('chown -R www-data:www-data app/cache')
         os.system('chmod -R 0777 app/cache')
+        
+### DROP_DB
+
+elif args.action == 'drop_database':
+    platform = get_installed_platform(args.name)
+    claroline_console(platform, 'doctrine:database:drop --force')
+    
+elif args.action == 'build':
+    param(args.name, args.symlink)
+    create(args.name)
+    install(args.name)
     
 ### CHECK_CONFIGS
 
@@ -459,12 +542,11 @@ elif args.action == 'check-configs':
 ### CUSTOM
 
 elif args.action == 'custom':
-    if args.name == 'ecoles-base':
-        platforms = get_installed_platforms()
+    platforms = get_child_platforms(args.name)
 
-        for platform in platforms:
-            os.chdir(platform['claroline_root'])
-            claroline_console(platform, 'DO W/E YOU WANT HERE')
+    for platform in platforms:
+        os.chdir(platform['claroline_root'])
+        claroline_console(platform, 'DO W/E YOU WANT HERE')
 
 else:
     print "INVALID PARAMETERS"
