@@ -3,10 +3,11 @@
 /!\ warning: this script should be used as root for the moment /!\
 
 #### REQUIREMENTS
-- python (and some basics python libs I can't remember)
+- python (v2+) && python-yaml
 - apg
 - zip
 - git
+- zip
 
 You can install them with apt-get
 
