@@ -163,7 +163,8 @@ def backup_sources(platform):
     os.chdir(platform['claroline_root'])
     print 'Backing up sources for ' + name +'...'
     zip_name = name + '@' + __DATE__ + '.source.zip'
-    command = 'zip -r -q ' + backup_tmp + '/' + zip_name + ' vendor'
+    command = 'zip -r -q ' + backup_directory + '/' + __DATE__ + '/' + zip_name + ' vendor'
+    print command
     os.system(command)
 
 def backup_files(platform):
@@ -172,21 +173,23 @@ def backup_files(platform):
     print 'backing up the platform files for ' + name + '...'
     zip_name = name + '@' + __DATE__ + '.file.zip'
     command = 'zip -r -q '
-    command += backup_tmp + '/' + zip_name + ' '
+    command += backup_directory + '/' + __DATE__ + '/' + zip_name + ' '
 
     for directory in __BACKUP__:
         command += directory + ' '
 
-    exclude = '-x ' + '"' + platform['claroline_root'] + 'app/logs" ' + '"' + platform['claroline_root'] + 'app/cache" '
+    exclude = '-x app/logs app/cache'
     command += exclude
+    print command
     os.system(command)
 
 def backup_database(platform):
-    name = platform['db_name']
+    name = platform['name']
     print 'Backing up the database for ' + name + '...'
     sql_file = name + '@' + __DATE__ + '.sql'
-    backup_file = backup_tmp + '/' + sql_file
-    command = "mysqldump --opt --databases " + name + "_prod -u " + name + " --password='" + platform['db_pwd'] + "' > " + backup_file
+    backup_file = backup_directory + '/' + __DATE__ + '/' + sql_file
+    command = "mysqldump --opt --databases " + platform['db_name'] + " -u " + name + " --password='" + platform['db_pwd'] + "' > " + backup_file
+    print command
     os.system(command)
 
 def base_update(name):
@@ -367,7 +370,7 @@ def param(name, symlink):
             name = name,
             user_home = '/home/' + name + '/',
             claroline_root = '/home/' + name + '/claroline/',
-            db_name = name,
+            db_name = name + '_prod',
             db_pwd = db_pwd_gen,
             token = token_gen,
             ecole_admin_pwd = ecole_admin_pwd_gen,
@@ -512,14 +515,13 @@ elif args.action == 'remove':
     
 elif args.action == 'backup':
     platforms = get_child_platforms(args.name)
+    os.system('mkdir -p ' + backup_directory + '/' + __DATE__)
     
     for platform in platforms:
         backup_files(platform)
         backup_database(platform)
 
     backup_sources(get_installed_platform(args.name))
-    os.system('mkdir -p ' + backup_directory + '/' + __DATE__)
-    os.system('mv ' + backup_tmp + '/* ' + backup_directory + '/' + __DATE__ + '/')
 
 elif args.action == 'update':
     platforms = base_update(args.name)
