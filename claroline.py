@@ -186,11 +186,13 @@ def backup_files(platform):
     os.system(command)
 
 def backup_database(platform):
-    name = platform['db_name']
+    dbName = platform['db_name']
+    name = platform['name']
     print 'Backing up the database for ' + name + '...'
     sql_file = name + '@' + __DATE__ + '.sql'
     backup_file = backup_tmp + '/' + sql_file
-    command = "mysqldump --no-create-db --opt --databases " + name + "_prod -u " + name + " --password='" + platform['db_pwd'] + "' > " + backup_file
+    command = "mysqldump --no-create-db --opt " + dbName + " -u " + name + " --password='" + platform['db_pwd'] + "' > " + backup_file
+    print command
     os.system(command)
 
 def base_update(name):
