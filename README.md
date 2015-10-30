@@ -20,17 +20,11 @@ You can install them with apt-get
 - python claroline.py --help //this will show you the list of available tools
 
 #### CREATE A NEW PLATFORM
-- sudo python claroline.py param --name=PLATFORM_NAME
+- sudo python claroline.py param --name=PLATFORM_NAME [--symlink=BASE_PLATFORM]
 - sudo python claroline.py create --name=PLATFORM_NAME
 - sudo python claroline.py install --name=PLATFORM_NAME
 - sudo service apache2 restart //this could be added to the script
 
-#### CREATING A PLATFORM WITH SHARED VENDOR DIRECTORY
-- sudo python claroline.py param --name=PLATFORM_NAME --symlink=BASE_PLATFORM
-- sudo python claroline.py create --name=PLATFORM_NAME
-- sudo python claroline.py install --name=PLATFORM_NAME
-- sudo service apache2 restart //this could be added to the script
- 
 #### CUSTOMIZING INSTALLATION
 - edit the platform_options.yml.dist and masters.yml.dist file and run the init command. 
 
@@ -47,7 +41,12 @@ You can install them with apt-get
 #### REMOVE
 - sudo python claroline.py remove --name=PLATFORM_NAME
 
+#### RESTORE
+- sudo python claroline.py restore --restore=FOLDER [--symlink=BASE_PLATFORM] [-rm]
+
+#### MIGRATE
+- sudo python claroline.py migrate --restore=FOLDER [--symlink=BASE_PLATFORM]
+
 ### TODO
 - hooks
-- debug
-- restore
+- autocomplete
