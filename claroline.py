@@ -70,13 +70,17 @@ parser.add_argument('-s', '--symlink', help=help_symlink)
 parser.add_argument('-r', '--restore', help=help_restore)
 parser.add_argument('-rm', '--remove', help=help_remove, action='store_true')
 parser.add_argument('-c', '--console', help=help_console)
+parser.add_argument('-nc', '--noconfirm', action='store_true')
 args = parser.parse_args()
 
 #############
 # FUNCTIONS #
 #############
 
-def confirm(prompt=None, resp=False):    
+def confirm(prompt=None, resp=False):  
+    if (args.noconfirm):
+        return True
+      
     if prompt is None:
         prompt = 'Confirm'
 
@@ -325,8 +329,21 @@ def restore_platform(platform, folder, symlink):
     #    os.system('rm -rf ' + directory')
     
     os.system('unzip -o ' + filesPath)
+    
+    print 'Adding the correct database identifiers in parameters.yml...' 
+    parametersPath = platform['claroline_root'] + 'app/config/parameters.yml'
+
+    with open(parametersPath, 'r') as stream:
+        parameters = yaml.load(stream)
+        
+    parameters['parameters']['database_password'] = platform['db_pwd']
+    data_yaml = yaml.dump(parameters, explicit_start = True, default_flow_style=False)
+    paramFile = open(parametersPath, 'w+')
+    paramFile.write(data_yaml)
         
     print 'Clearing cache and other stuff...'
+    paramFile = open(parametersPath + ".yml", 'w')
+    paramFile.write(data_yaml)
     
 def migrate_platform(name, folder, symlink):
     platform = param(name, symlink)
@@ -470,6 +487,7 @@ if args.action == "init":
     os.system('mkdir -p ' + operations_dir)
     os.system('cp ' + __DIR__ + '/platform_options.yml.dist ' + __DIR__ + '/skel/claroline/app/config/platform_options.yml')
     os.system('cp ' + __DIR__ + '/masters.yml.dist ' + __DIR__ + '/skel/claroline/app/config/masters.yml')
+    os.system('cp ' + __DIR__ + '/vhost.conf.dist ' + __DIR__ + '/files/vhost.conf')
     #touch
     open(__DIR__ + '/.init', 'a').close()
     print 'You may want to edit the base composer file in the /skel directory.'
@@ -492,6 +510,7 @@ elif args.action == 'migrate':
     if (not args.restore):
         raise Exception('The restoration folder is required (--restore=RESTORE_FOLDER).')
     migrate(args.restore, args.symlink)
+    sys.exit()
     
 ### THE NAME IS REQUIRED FOR EVERY OTHER ACTION
 
@@ -508,7 +527,10 @@ elif args.action == "install":
     install(args.name)
     
 elif args.action == 'remove':
-    remove(args.name)
+    platforms = get_child_platforms(args.name)
+    
+    for platform in platforms:
+        remove(args.name)
     
 elif args.action == 'backup':
     platforms = get_child_platforms(args.name)
