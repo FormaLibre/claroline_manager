@@ -301,7 +301,7 @@ def restore_platform(platform, folder, symlink):
     if (not os.path.exists(sqlPath)):
         raise Exception(sqlPath + ' does not exists.')
         
-    run_sql('< ' + sqlPath, False)
+    run_sql(platform['db_name'] + ' < ' + sqlPath, False)
     os.chdir(platform['claroline_root'])
     baseFolder = backup_directory + '/' + folder
       
@@ -338,6 +338,7 @@ def restore_platform(platform, folder, symlink):
         
     rangeKeys = yaml.load(parameters['parameters']['chosenRangeKeys'])
     parameters['parameters']['database_password'] = platform['db_pwd']
+    parameters['parameters']['database_name'] = platform['db_name']
     parameters['parameters']['chosenRangeKeys'] = rangeKeys
     data_yaml = yaml.dump(parameters, default_flow_style=False)
     paramFile = open(parametersPath, 'w')
