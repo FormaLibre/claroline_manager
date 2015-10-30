@@ -262,7 +262,7 @@ def make_database(platform):
     # Create database
     input  = open(__DIR__ + "/files/create-db.sql", 'r')
     output = open(__DIR__ + "/tmp/" + platform["name"] + ".sql", 'w')
-    clean  = input.read().replace("NEWUSER", platform["db_name"]).replace("PASSWD", platform["db_pwd"])
+    clean  = input.read().replace("NEWUSER", platform["name"]).replace("PASSWD", platform["db_pwd"]).replace('NEW_DATABASE', platform['db_name'])
     output.write(clean)
     run_sql(clean)
     
@@ -395,7 +395,7 @@ def param(name, symlink):
             name = name,
             user_home = '/home/' + name + '/',
             claroline_root = '/home/' + name + '/claroline/',
-            db_name = name,
+            db_name = name + '_prod',
             db_pwd = db_pwd_gen,
             token = token_gen,
             ecole_admin_pwd = ecole_admin_pwd_gen,
