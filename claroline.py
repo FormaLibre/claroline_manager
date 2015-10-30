@@ -242,7 +242,7 @@ def make_user(platform):
         clean  = input.read().replace("NEWUSER", platform["name"])
         output.write(clean)
         os.system("a2ensite " + platform["name"])
-        os.system("service apache2 reload")
+        #os.system("service apache2 reload")
 		
     elif webserver == 'nginx':
 		print 'nginx is not supported yet. Please create your vhost manually or make a pr at https://github.com/FormaLibre/claroline_manager to handle this webserver.'
@@ -343,7 +343,18 @@ def restore_platform(platform, folder, symlink):
     paramFile = open(parametersPath, 'w')
     paramFile.write(data_yaml)
         
-    print 'Clearing cache and other stuff...'
+    os.chdir(platform['claroline_root'])
+    cmd = 'rm -rf ' + ' app/cache/*'
+    print 'Do you want to execute ' + cmd + ' ?'	
+    conf = confirm()
+
+    if conf:
+	os.system(cmd)
+   
+    #claroline_console(platform, 'cache:warm')
+    #claroline_console(platform, 'assets:install')
+    #claroline_console(platform, 'assetic:dump')
+    #command = 'sh ' + permissions_script + ' ' + platform['claroline_root']
     
 def migrate_platform(name, folder, symlink):
     platform = param(name, symlink)
