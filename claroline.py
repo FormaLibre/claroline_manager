@@ -167,8 +167,7 @@ def backup_sources(platform):
     os.chdir(platform['claroline_root'])
     print 'Backing up sources for ' + name +'...'
     zip_name = name + '@' + __DATE__ + '.source.zip'
-    command = 'zip -r -q ' + backup_directory + '/' + __DATE__ + '/' + zip_name + ' vendor'
-    print command
+    command = 'zip -r -q ' + backup_tmp + '/' + zip_name + ' vendor'
     os.system(command)
 
 def backup_files(platform):
@@ -177,23 +176,21 @@ def backup_files(platform):
     print 'backing up the platform files for ' + name + '...'
     zip_name = name + '@' + __DATE__ + '.file.zip'
     command = 'zip -r -q '
-    command += backup_directory + '/' + __DATE__ + '/' + zip_name + ' '
+    command += backup_tmp + '/' + zip_name + ' '
 
     for directory in __BACKUP__:
         command += directory + ' '
 
-    exclude = '-x app/logs app/cache'
+    exclude = '-x ' + '"' + platform['claroline_root'] + 'app/logs" ' + '"' + platform['claroline_root'] + 'app/cache" '
     command += exclude
-    print command
     os.system(command)
 
 def backup_database(platform):
-    name = platform['name']
+    name = platform['db_name']
     print 'Backing up the database for ' + name + '...'
     sql_file = name + '@' + __DATE__ + '.sql'
-    backup_file = backup_directory + '/' + __DATE__ + '/' + sql_file
-    command = "mysqldump --opt --databases " + platform['db_name'] + " -u " + name + " --password='" + platform['db_pwd'] + "' > " + backup_file
-    print command
+    backup_file = backup_tmp + '/' + sql_file
+    command = "mysqldump --opt --databases " + name + "_prod -u " + name + " --password='" + platform['db_pwd'] + "' > " + backup_file
     os.system(command)
 
 def base_update(name):
@@ -265,7 +262,7 @@ def make_database(platform):
     # Create database
     input  = open(__DIR__ + "/files/create-db.sql", 'r')
     output = open(__DIR__ + "/tmp/" + platform["name"] + ".sql", 'w')
-    clean  = input.read().replace("NEWUSER", platform["name"]).replace("PASSWD", platform["db_pwd"])
+    clean  = input.read().replace("NEWUSER", platform["db_name"]).replace("PASSWD", platform["db_pwd"])
     output.write(clean)
     run_sql(clean)
     
@@ -339,8 +336,10 @@ def restore_platform(platform, folder, symlink):
     with open(parametersPath, 'r') as stream:
         parameters = yaml.load(stream)
         
+    rangeKeys = yaml.load(parameters['parameters']['chosenRangeKeys'])
     parameters['parameters']['database_password'] = platform['db_pwd']
-    data_yaml = yaml.dump(parameters, explicit_start = True, default_flow_style=False)
+    parameters['parameters']['chosenRangeKeys'] = rangeKeys
+    data_yaml = yaml.dump(parameters, default_flow_style=False)
     paramFile = open(parametersPath, 'w')
     paramFile.write(data_yaml)
         
@@ -385,7 +384,7 @@ def param(name, symlink):
             name = name,
             user_home = '/home/' + name + '/',
             claroline_root = '/home/' + name + '/claroline/',
-            db_name = name + '_prod',
+            db_name = name,
             db_pwd = db_pwd_gen,
             token = token_gen,
             ecole_admin_pwd = ecole_admin_pwd_gen,
@@ -535,13 +534,14 @@ elif args.action == 'remove':
     
 elif args.action == 'backup':
     platforms = get_child_platforms(args.name)
-    os.system('mkdir -p ' + backup_directory + '/' + __DATE__)
     
     for platform in platforms:
         backup_files(platform)
         backup_database(platform)
 
     backup_sources(get_installed_platform(args.name))
+    os.system('mkdir -p ' + backup_directory + '/' + __DATE__)
+    os.system('mv ' + backup_tmp + '/* ' + backup_directory + '/' + __DATE__ + '/')
 
 elif args.action == 'update':
     platforms = base_update(args.name)
