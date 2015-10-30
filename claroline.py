@@ -338,12 +338,10 @@ def restore_platform(platform, folder, symlink):
         
     parameters['parameters']['database_password'] = platform['db_pwd']
     data_yaml = yaml.dump(parameters, explicit_start = True, default_flow_style=False)
-    paramFile = open(parametersPath, 'w+')
+    paramFile = open(parametersPath, 'w')
     paramFile.write(data_yaml)
         
     print 'Clearing cache and other stuff...'
-    paramFile = open(parametersPath + ".yml", 'w')
-    paramFile.write(data_yaml)
     
 def migrate_platform(name, folder, symlink):
     platform = param(name, symlink)
