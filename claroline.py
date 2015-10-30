@@ -131,27 +131,35 @@ def get_installed_platform(name):
             return platform
            
 def get_child_platforms(name):
-    base = get_installed_platform(name)
-    
-    if (base['base_platform'] != None):
-        print 'Please run the action ' + args.action + ' on the ' + base['base_platform'] + ' platform instead.'
-        raise Exception('The platform ' + name + ' uses ' + base['base_platform'] + ' as base with symlink.')
+    names = name.split(",") 
+    baseList  = []
+
+    for name in names:
+        baseList.append(get_installed_platform(name))
+
+    for base in baseList:
+        if (base['base_platform'] != None):
+            print 'Please run the action ' + args.action + ' on the ' + base['base_platform'] + ' platform instead.'
+            raise Exception('The platform ' + name + ' uses ' + base['base_platform'] + ' as base with symlink.')
 
     platforms = []
-    names = []
     installed = get_installed_platforms()
-    
-    print 'The action ' + args.action + ' will be executed on:'
-    print name
 
     for platform in installed:
-        if platform['base_platform'] != None and platform['base_platform'] == name:
-            platforms.append(platform)
-            print platform['name']
+        for base in baseList:
+            if platform['base_platform'] != None and platform['base_platform'] == base['name']:
+                platforms.append(platform)
 
-    platforms.append(base)
-    conf = confirm()
-    
+    for base in baseList:
+        if not base in platforms:
+            platforms.append(base)
+    print 'The action ' + args.action + ' will be executed on:'    
+
+    for platform in platforms:
+        print platform['name']
+
+    conf = confirm()    
+
     if not conf:
         sys.exit()
     
