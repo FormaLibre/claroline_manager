@@ -265,7 +265,7 @@ def make_database(platform):
     # Create database
     input  = open(__DIR__ + "/files/create-db.sql", 'r')
     output = open(__DIR__ + "/tmp/" + platform["name"] + ".sql", 'w')
-    clean  = input.read().replace("NEWUSER", platform["db_name"]).replace("PASSWD", platform["db_pwd"])
+    clean  = input.read().replace("NEWUSER", platform["name"]).replace("PASSWD", platform["db_pwd"])
     output.write(clean)
     run_sql(clean)
     
