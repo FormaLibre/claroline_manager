@@ -623,6 +623,14 @@ elif args.action == 'check-configs':
         paramFile = open(platform_dir + "/" + platform['name'] + ".yml", 'w')
         paramFile.write(data_yaml)
 
+elif args.action == 'dist-migration':
+	platform = get_installed_platform(args.name)
+	dist_location = platform['remote_srv'] + ':' + platform['remote_loc']
+	os.system('rsync --progress -e ssh -az  ' + dist_location + ' ' + platform['user_home'] + '/claroline/')
+	command = "mysqldump --verbose --no-create-db --opt " + platform['db_dist_name'] + " --ignore-table="+ platform['db_dist_name'] + ".claro_log" + " -u " + args.name + " --password='" + platform['db_dist_pwd'] + "' > " + platform['user_home'] + 'sqldump.sql'
+	os.system('ssh ' + platform['remote_srv'] + ' ' + command)
+	
+
 else:
     print "INVALID PARAMETERS"
 
