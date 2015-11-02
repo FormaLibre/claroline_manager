@@ -16,6 +16,7 @@ with open('claroline.yml') as stream:
     parameters = yaml.load(stream)
 
 claro_admin_pwd    = parameters['claro_admin_pwd']
+claro_admin_email  = parameters['claro_admin_email']
 mysql_root_pwd     = parameters['mysql_root_pwd']
 backup_directory   = __DIR__ + '/backups'
 backup_tmp         = backup_directory + '/tmp'
@@ -130,7 +131,7 @@ def get_installed_platform(name):
         if platform['name'] == name:
             return platform
            
-def get_child_platforms(name):
+def get_queried_platforms(name):
     names = name.split(",") 
     baseList  = []
 
@@ -204,7 +205,7 @@ def backup_database(platform):
     os.system(command)
 
 def base_update(name):
-    platforms = get_child_platforms(name)
+    platforms = get_queried_platforms(name)
     base = get_installed_platform(name)
     
     for platform in platforms:
@@ -448,7 +449,7 @@ def install(name):
     claroline_console(platform, "claroline:install")
     claroline_console(platform, "assets:install --symlink")
     claroline_console(platform, "assetic:dump")
-    claroline_console(platform,  "claroline:user:create -a Admin Claroline clacoAdmin " + claro_admin_pwd + ' some_email')
+    claroline_console(platform,  "claroline:user:create -a Admin Claroline clacoAdmin " + claro_admin_pwd + ' ' + claro_admin_email)
     claroline_console(platform,  "claroline:user:create -a Admin " + platform["name"] + " " + platform["name"] + "Admin " + platform["ecole_admin_pwd"] + ' some_other_email')
     #uncomment the following line if you want to fire the permission script
     #os.system("bash " + __DIR__ + "/permissions.sh " + platform["claroline_root"]")
@@ -533,6 +534,15 @@ elif args.action == 'migrate':
         raise Exception('The restoration folder is required (--restore=RESTORE_FOLDER).')
     migrate(args.restore, args.symlink)
     sys.exit()
+
+elif args.action == 'dist-migrate':
+    platforms = get_queried_platforms(args.name)
+
+    for platform in platforms:
+        dist_location = platform['remote_srv'] + ':' + platform['remote_loc']
+        os.system('rsync --progress -e ssh -az  ' + dist_location + ' ' + platform['user_home'] + '/claroline/')
+        command = "mysqldump --verbose --no-create-db --opt " + platform['db_dist_name'] + " -u " + args.name + " --password='" + platform['db_dist_pwd'] + "' > " + platform['user_home'] + 'sqldump.sql'
+        os.system('ssh ' + platform['remote_srv'] + ' ' + command)
     
 ### THE NAME IS REQUIRED FOR EVERY OTHER ACTION
 
@@ -549,13 +559,13 @@ elif args.action == "install":
     install(args.name)
     
 elif args.action == 'remove':
-    platforms = get_child_platforms(args.name)
+    platforms = get_queried_platforms(args.name)
     
     for platform in platforms:
         remove(args.name)
     
 elif args.action == 'backup':
-    platforms = get_child_platforms(args.name)
+    platforms = get_queried_platforms(args.name)
     
     for platform in platforms:
         backup_files(platform)
@@ -578,7 +588,7 @@ elif args.action == 'update-light':
         update_claroline_light(platform)
 
 elif args.action == 'perm':
-    platforms = get_child_platforms(args.name)
+    platforms = get_queried_platforms(args.name)
 
     for platform in platforms:
         command = 'sh ' + permissions_script + ' ' + platform['claroline_root']
@@ -586,14 +596,14 @@ elif args.action == 'perm':
         os.system(command)
 
 elif args.action == 'console':
-    platforms = get_child_platforms(args.name)
+    platforms = get_queried_platforms(args.name)
 
     for platform in platforms:
         os.chdir(platform['claroline_root'])
         claroline_console(platform, args.console)
 
 elif args.action == 'warm':
-    platforms = get_child_platforms(args.name)
+    platforms = get_queried_platforms(args.name)
 
     for platform in platforms:
         os.chdir(platform['claroline_root'])
@@ -622,14 +632,6 @@ elif args.action == 'check-configs':
         data_yaml = yaml.dump(platform, explicit_start = True, default_flow_style=False)
         paramFile = open(platform_dir + "/" + platform['name'] + ".yml", 'w')
         paramFile.write(data_yaml)
-
-elif args.action == 'dist-migration':
-	platform = get_installed_platform(args.name)
-	dist_location = platform['remote_srv'] + ':' + platform['remote_loc']
-	os.system('rsync --progress -e ssh -az  ' + dist_location + ' ' + platform['user_home'] + '/claroline/')
-	command = "mysqldump --verbose --no-create-db --opt " + platform['db_dist_name'] + " --ignore-table="+ platform['db_dist_name'] + ".claro_log" + " -u " + args.name + " --password='" + platform['db_dist_pwd'] + "' > " + platform['user_home'] + 'sqldump.sql'
-	os.system('ssh ' + platform['remote_srv'] + ' ' + command)
-	
 
 else:
     print "INVALID PARAMETERS"

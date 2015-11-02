@@ -1,4 +1,5 @@
 claro_admin_pwd: ~
 mysql_root_pwd: ~
 webserver: apache #nginx
+claro_admin_email: admin@changeme.com
 
