@@ -74,6 +74,8 @@ parser.add_argument('-rm', '--remove', help=help_remove, action='store_true')
 parser.add_argument('-c', '--console', help=help_console)
 parser.add_argument('-nc', '--noconfirm', action='store_true')
 parser.add_argument('-f', '--force', action='store_true')
+parser.add_argument('-srv', '--srv')
+parser.add_argument('-d', '--dismisschild', action='store_true')
 args = parser.parse_args()
 
 #############
@@ -152,14 +154,16 @@ def get_queried_platforms(name):
     platforms = []
     installed = get_installed_platforms()
 
-    for platform in installed:
-        for base in baseList:
-            if platform['base_platform'] != None and platform['base_platform'] == base['name']:
-                platforms.append(platform)
+    if not args.dismisschild:           
+        for platform in installed:
+            for base in baseList:
+                if platform['base_platform'] != None and platform['base_platform'] == base['name']:
+                    platforms.append(platform)
 
     for base in baseList:
         if not base in platforms:
             platforms.append(base)
+
     print 'The action ' + args.action + ' will be executed on:'    
 
     for platform in platforms:
@@ -565,7 +569,6 @@ elif args.action == 'dist-migrate':
         platform['user_home'] = '/home/' + platform['name'] + '/'
         platform['claroline_root'] = platform['user_home'] + 'claroline/'
         platform['db_name'] = platform['db_dist_name']
-        platform['base_platform'] = args.symlink
         platform['token'] = os.popen("apg -a 1 -m 50 -n 1 -MCLN").read().rstrip()
         data_yaml = yaml.dump(platform, default_flow_style=False)
         paramFile = open(platformPath, 'w')
@@ -607,7 +610,7 @@ elif args.action == 'dist-migrate':
 
     #link the vendor directory
     for platform in platforms:
-        if (platform['base_platform'] == args.symlink):
+        if platform['base_platform']:
             set_symlink(platform)
 
 
@@ -681,19 +684,16 @@ elif args.action == 'build':
     create(args.name)
     install(args.name)
     
-elif args.action == 'check-configs':
+elif args.action == 'param-migrate':
     base_platform = args.name
-    platforms = get_installed_platforms()
+    platforms = get_queried_platforms(args.name)
     
     for platform in platforms:
-        if (not 'claroline_root' in platform):
-            platform['claroline_root'] = platform['user_home'] + 'claroline/'
-        if (not 'base_platform' in platform):
-            if (platform['name'] == args.name):
-                platform['base_platform'] = None
-            else:
-                platform['base_platform'] = args.name 
-        
+        platform['remote_loc']   = platform['claroline_root']
+        platform['remote_srv']   = args.srv
+        platform['db_dist_name'] = platform['db_name']
+        platform['db_dist_pwd']  = platform['db_pwd']
+
         data_yaml = yaml.dump(platform, explicit_start = True, default_flow_style=False)
         paramFile = open(platform_dir + "/" + platform['name'] + ".yml", 'w')
         paramFile.write(data_yaml)

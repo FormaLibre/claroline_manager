@@ -31,25 +31,33 @@ You can install them with apt-get
 - set the required values (claroline_root, db_name, db_pwd, name - the others aren't required)
 
 #### UPDATING 
-- sudo python claroline.py update --name=PLATFORM_NAME
+- sudo python claroline.py update --name=PLATFORM_NAME [--force] [-d]
 
 #### BACKUP
-- sudo python claroline.py backup --name=PLATFORM_NAME
+- sudo python claroline.py backup --name=PLATFORM_NAME [--force] [-d]
 
 #### REMOVE
-- sudo python claroline.py remove --name=PLATFORM_NAME
+- sudo python claroline.py remove --name=PLATFORM_NAME [--force] [-d]
 
 #### RESTORE
-- sudo python claroline.py restore --restore=FOLDER [--symlink=BASE_PLATFORM] [-rm]
+- sudo python claroline.py restore --restore=FOLDER [--symlink=BASE_PLATFORM] [-rm] [--force] [-d]
 
 #### MIGRATE
-- sudo python claroline.py migrate --restore=FOLDER [--symlink=BASE_PLATFORM]
+- sudo python claroline.py migrate --restore=FOLDER [--symlink=BASE_PLATFORM] [--force] [-d]
 
 #### DIST MIGRATE (requires root account)
 - sudo su
 - ssh-agent /bin/bash
 - ssh-add /path/to/key
-- python claroline.py dist-migrate --name=PLATFORM_NAME [--symlink=BASE_PLATFORM]
+- python claroline.py dist-migrate --name=PLATFORM_NAME [--force] [-d]
+
+#### PARAM MIGRATE
+- ssh-add /path/to/key
+- go to the dist server claroline_manager tool
+- zip platforms.zip platforms/*
+- scp login@server:/path/to/platforms.zip platforms.zip
+- unzip platforms.zip
+- python claroline.py param-migrate --name=PLATFORM_NAME [--force] [-d]
 
 ### TODO
 - hooks

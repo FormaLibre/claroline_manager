@@ -11,4 +11,4 @@ user_home: ~
 remote_srv: ~
 remote_loc: ~
 db_dist_name: ~
-db_dist_platform: ~
+db_dist_pwd: ~
