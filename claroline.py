@@ -29,24 +29,26 @@ webserver          = parameters['webserver']
 help_action = """
     This script should be used as root. Be carreful.
 
-    init:          Initialize the temporary directories for this script and commit the changes of the .dist files. \n
-    param:         Create a new file containing a platform installation parameters (see the platforms directory). \n
-    create:        Create the platform datatree (with symlink or runs composer). This will also add a new database, a new database user, a new user and a new vhost.\n
-    install:       Install a platform. \n
-    build          Fires the param, create and install method for a platform. \n
-    backup:        Generates a backup. \n
-    remove:        Removes a platform. \n
-    update:        Update a platform. \n  
-    update-light:  Update a platform without claroline:update. \n  
-    restore:       Restore platforms. \n
-    migrate:       Migrate platforms. \n
-    perm:          Fire the permission script for a platform. \n
-    warm:          Warm the cache.\n
-    console:       Runs a claroline console command.\n
+    init:          Initialize the temporary directories for this script and commit the changes of the .dist files.
+    param:         Create a new file containing a platform installation parameters (see the platforms directory).
+    create:        Create the platform datatree (with symlink or runs composer). This will also add a new database, a new database user, a new user and a new vhost.
+    install:       Install a platform.
+    build          Fires the param, create and install method for a platform.
+    backup:        Generates a backup.
+    remove:        Removes a platform.
+    update:        Update a platform.
+    update-light:  Update a platform without claroline:update.
+    restore:       Restore platforms.
+    migrate:       Migrate platforms.
+    dist-migrate:  Migrate from a remote server.
+    perm:          Fire the permission script for a platform.
+    warm:          Warm the cache.
+    console:       Runs a claroline console command.
+    param-migrate  Build the parameters files for a migration.
 """
 
 help_name = """
-    The platform name.
+    The platform name. [all]
 """
 
 help_symlink = """
@@ -65,6 +67,22 @@ help_console = """
     Fires a claroline console command [console].
 """
 
+help_dismiss = """
+    Doesn't do the action on the child platforms. [all]
+"""
+
+help_server = """
+    A remote server. [param-migrate]
+"""
+
+help_force = """
+    Force the action even if a platform is symlinked. [all]
+"""
+
+help_confirm = """
+    Doesn't prompt any confirmation
+"""
+
 parser = argparse.ArgumentParser("Allow you to manage claroline platforms.", formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("action", help=help_action)
 parser.add_argument('-n', '--name', help=help_name)
@@ -72,10 +90,10 @@ parser.add_argument('-s', '--symlink', help=help_symlink)
 parser.add_argument('-r', '--restore', help=help_restore)
 parser.add_argument('-rm', '--remove', help=help_remove, action='store_true')
 parser.add_argument('-c', '--console', help=help_console)
-parser.add_argument('-nc', '--noconfirm', action='store_true')
-parser.add_argument('-f', '--force', action='store_true')
-parser.add_argument('-srv', '--srv')
-parser.add_argument('-d', '--dismisschild', action='store_true')
+parser.add_argument('-nc', '--noconfirm', action='store_true', help=help_confirm)
+parser.add_argument('-f', '--force', action='store_true', help=help_force)
+parser.add_argument('-srv', '--srv', help=help_server)
+parser.add_argument('-d', '--dismisschild', action='store_true', help=help_dismiss)
 args = parser.parse_args()
 
 #############
@@ -307,6 +325,9 @@ def set_permissions(platform):
 def set_symlink(platform):
     print 'Set the symlink...'
     base = get_installed_platform(platform['base_platform'])
+    if not base:
+        print 'Platform ' + platform['name'] + ' has no symlink defined.'
+        return
     if (base['name'] == platform['name']):
         print 'Platform ' + base['name'] + ' cannot symlink itself.'
         return
@@ -579,7 +600,7 @@ elif args.action == 'dist-migrate':
         print rsyncCmd
         os.system(rsyncCmd)
         os.system('rm ' + platform['user_home'] + 'sqldump.sql') #you may want to comment this line
-        command = "mysqldump --verbose --opt " + platform['db_dist_name'] + " -u " + args.name + " --password='" + platform['db_dist_pwd'] + "' > " + platform['user_home'] + 'sqldump.sql'
+        command = "mysqldump --verbose --opt " + platform['db_dist_name'] + " -u " + platform['name'] + " --password='" + platform['db_dist_pwd'] + "' > " + platform['user_home'] + 'sqldump.sql'
         sshCmd = 'ssh ' + platform['remote_srv'] + ' ' + command
         print sshCmd
         os.system(sshCmd)
@@ -697,6 +718,12 @@ elif args.action == 'param-migrate':
         data_yaml = yaml.dump(platform, explicit_start = True, default_flow_style=False)
         paramFile = open(platform_dir + "/" + platform['name'] + ".yml", 'w')
         paramFile.write(data_yaml)
+
+elif args.action == "symlink":
+    platforms = get_queried_platforms(args.name)
+
+    for platform in platforms:
+        set_symlink(platform)
 
 else:
     print "DONE !"

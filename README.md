@@ -59,6 +59,10 @@ You can install them with apt-get
 - unzip platforms.zip
 - python claroline.py param-migrate --name=PLATFORM_NAME [--force] [-d]
 
+#### optional arguments for each action: 
+- [-d]: doesn't fire the action on symlinked platforms.
+- [-f]: force the action on symlinked platforms.
+
 ### TODO
 - hooks
 - autocomplete
