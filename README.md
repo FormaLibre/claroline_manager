@@ -46,9 +46,13 @@ You can install them with apt-get
 - sudo python claroline.py migrate --restore=FOLDER [--symlink=BASE_PLATFORM] [--force] [-d]
 
 #### DIST MIGRATE (requires root account)
+
+##### If you can't access ssh with your root account, follow these steps
 - sudo su
 - ssh-agent /bin/bash
 - ssh-add /path/to/key
+
+##### Start the migration
 - python claroline.py dist-migrate --name=PLATFORM_NAME [--force] [-d]
 
 #### PARAM MIGRATE
@@ -58,10 +62,6 @@ You can install them with apt-get
 - scp login@server:/path/to/platforms.zip platforms.zip
 - unzip platforms.zip
 - python claroline.py param-migrate --name=PLATFORM_NAME [--force] [-d]
-
-#### optional arguments for each action: 
-- [-d]: doesn't fire the action on symlinked platforms.
-- [-f]: force the action on symlinked platforms.
 
 ### TODO
 - hooks
