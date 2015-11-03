@@ -6,11 +6,12 @@ import os
 import sys
 import argparse
 import datetime
+import pwd
 
 __FILE__   = os.path.realpath(__file__)
 __DIR__    = os.path.dirname(__FILE__)
 __DATE__   = str(datetime.datetime.now().strftime('%Y-%d-%m'))
-__BACKUP__ = ['web', 'files', 'bin', 'app']
+__BACKUP__ = ['web', 'files', 'bin', 'app', 'composer.json']
 
 with open('claroline.yml') as stream:
     parameters = yaml.load(stream)
@@ -28,15 +29,15 @@ webserver          = parameters['webserver']
 help_action = """
     This script should be used as root. Be carreful.
 
-    init:          Initialize the temporary directories for this script. \n
+    init:          Initialize the temporary directories for this script and commit the changes of the .dist files. \n
     param:         Create a new file containing a platform installation parameters (see the platforms directory). \n
     create:        Create the platform datatree (with symlink or runs composer). This will also add a new database, a new database user, a new user and a new vhost.\n
     install:       Install a platform. \n
     build          Fires the param, create and install method for a platform. \n
     backup:        Generates a backup. \n
-    remove:	   Removes a platform. \n
-    update:        Update a platform (warning: be carefull of symlinks if you use them). \n  
-    update-light:  Update a platform without claroline:update (warning: be carefull of symlinks if you use them). \n  
+    remove:        Removes a platform. \n
+    update:        Update a platform. \n  
+    update-light:  Update a platform without claroline:update. \n  
     restore:       Restore platforms. \n
     migrate:       Migrate platforms. \n
     perm:          Fire the permission script for a platform. \n
@@ -72,6 +73,7 @@ parser.add_argument('-r', '--restore', help=help_restore)
 parser.add_argument('-rm', '--remove', help=help_remove, action='store_true')
 parser.add_argument('-c', '--console', help=help_console)
 parser.add_argument('-nc', '--noconfirm', action='store_true')
+parser.add_argument('-f', '--force', action='store_true')
 args = parser.parse_args()
 
 #############
@@ -121,7 +123,9 @@ def get_installed_platforms():
     for subdir, dirs, files in os.walk(platform_dir):
         for file in files:
             with open(platform_dir + '/' + file) as stream:
-                platforms.append(yaml.load(stream))
+                platform = yaml.load(stream)
+                if platform:
+                    platforms.append(platform)
 
     return platforms
 
@@ -136,10 +140,12 @@ def get_queried_platforms(name):
     baseList  = []
 
     for name in names:
-        baseList.append(get_installed_platform(name))
+        base = get_installed_platform(name)
+        if base:
+            baseList.append(base)
 
     for base in baseList:
-        if (base['base_platform'] != None):
+        if (base and base['base_platform'] != None and not args.force):
             print 'Please run the action ' + args.action + ' on the ' + base['base_platform'] + ' platform instead.'
             raise Exception('The platform ' + name + ' uses ' + base['base_platform'] + ' as base with symlink.')
 
@@ -241,6 +247,11 @@ def update_claroline_light(platform):
     os.system(command)
     
 def make_user(platform):
+
+    if platform['name'] in [x[0] for x in pwd.getpwall()]:
+        print platform['name'] + ' user already exists'
+        return
+
     # Create user and user home from skel
     cmd = "useradd --system --create-home --skel " + __DIR__ + "/skel/ " + platform["name"]
     os.system(cmd)
@@ -261,22 +272,43 @@ def make_user(platform):
 		print 'The webserver ' + args.webserver + ' is unknwown.'
         
 def make_database(platform):
-    # Config DB parameters in app/config
-    parameters_dist = platform["claroline_root"] + "app/config/parameters.yml.dist"
-    parameters = platform["claroline_root"] + "app/config/parameters.yml"
-
-    input  = open(parameters_dist, 'r')
-    output = open(parameters, 'w')
-    clean  = input.read().replace("claroline", platform["db_name"]).replace("CHANGEME", platform["db_pwd"]).replace("ThisTokenIsNotSoSecretChangeIt", platform["token"]).replace("root", platform["name"])
-    output.write(clean)
-
     # Create database
     input  = open(__DIR__ + "/files/create-db.sql", 'r')
     output = open(__DIR__ + "/tmp/" + platform["name"] + ".sql", 'w')
     clean  = input.read().replace("NEWUSER", platform["name"]).replace("PASSWD", platform["db_pwd"]).replace('NEW_DATABASE', platform['db_name'])
     output.write(clean)
     run_sql(clean)
+    set_parameters(platform)
     
+def set_parameters(platform):
+    parametersPath = platform['claroline_root'] + 'app/config/parameters.yml'
+
+    with open(parametersPath, 'r') as stream:
+        parameters = yaml.load(stream)
+        
+    rangeKeys = yaml.load(parameters['parameters']['chosenRangeKeys'])
+    parameters['parameters']['database_password'] = platform['db_pwd']
+    parameters['parameters']['database_name'] = platform['db_name']
+    parameters['parameters']['database_user'] = platform['name']
+    parameters['parameters']['chosenRangeKeys'] = rangeKeys
+    data_yaml = yaml.dump(parameters, default_flow_style=False)
+    paramFile = open(parametersPath, 'w')
+    paramFile.write(data_yaml)
+        
+def set_permissions(platform):
+    command = 'sh ' + permissions_script + ' ' + platform['claroline_root']
+    print command
+    os.system(command)
+
+def set_symlink(platform):
+    print 'Set the symlink...'
+    base = get_installed_platform(platform['base_platform'])
+    if (base['name'] == platform['name']):
+        print 'Platform ' + base['name'] + ' cannot symlink itself.'
+        return
+    os.system("ln -s " + base['claroline_root'] + "vendor " + platform["claroline_root"] + "vendor")
+    os.system('cp ' + base['claroline_root'] + 'app/config/bundles.ini ' + platform["claroline_root"] + 'app/config/bundles.ini')
+
 def check_restore(folder, symlink):
     restoreFolder = backup_directory + '/' + folder
 
@@ -304,7 +336,7 @@ def check_restore(folder, symlink):
         
     return platforms
     
-def restore_platform(platform, folder, symlink):
+def restore_platform(platform, folder):
     print 'Restoring the database...'
     sql = platform['name'] + '@' + folder + '.sql'
     sqlPath = backup_directory + '/' + folder + '/' + sql
@@ -316,16 +348,13 @@ def restore_platform(platform, folder, symlink):
     os.chdir(platform['claroline_root'])
     baseFolder = backup_directory + '/' + folder
       
-    if (symlink == None or platform['name'] == symlink):
+    if (not platform['base_platform']):
         print 'Extracting the vendor directory...'
         vendor = platform['name'] + '@' + folder + '.source.zip'
         vendorPath =  baseFolder + '/' + vendor
         os.system('unzip -q ' + vendorPath)
     else:
-        print 'Symlinking the vendor directory...'
-        base = get_installed_platform(symlink)
-        os.system("ln -s " + base['claroline_root'] + "vendor " + platform["claroline_root"] + "vendor")
-        os.system('cp ' + base['claroline_root'] + 'app/config/bundles.ini ' + platform["claroline_root"] + 'app/config/bundles.ini')
+        set_symlink(platform)
         
     print 'Extracting the saved files...'
     files = platform['name'] + '@' + folder + '.file.zip'
@@ -342,45 +371,35 @@ def restore_platform(platform, folder, symlink):
     os.system('unzip -o ' + filesPath)
     
     print 'Adding the correct database identifiers in parameters.yml...' 
-    parametersPath = platform['claroline_root'] + 'app/config/parameters.yml'
-
-    with open(parametersPath, 'r') as stream:
-        parameters = yaml.load(stream)
-        
-    rangeKeys = yaml.load(parameters['parameters']['chosenRangeKeys'])
-    parameters['parameters']['database_password'] = platform['db_pwd']
-    parameters['parameters']['database_name'] = platform['db_name']
-    parameters['parameters']['chosenRangeKeys'] = rangeKeys
-    data_yaml = yaml.dump(parameters, default_flow_style=False)
-    paramFile = open(parametersPath, 'w')
-    paramFile.write(data_yaml)
-        
-    os.chdir(platform['claroline_root'])
-    cmd = 'rm -rf ' + ' app/cache/*'
-    print 'Do you want to execute ' + cmd + ' ?'	
-    conf = confirm()
-
-    if conf:
-	os.system(cmd)
-   
-    #claroline_console(platform, 'cache:warm')
-    #claroline_console(platform, 'assets:install')
-    #claroline_console(platform, 'assetic:dump')
-    #command = 'sh ' + permissions_script + ' ' + platform['claroline_root']
+    set_parameters(platform)
+    remove_cache(platform)
     
 def migrate_platform(name, folder, symlink):
     platform = param(name, symlink)
     make_user(platform)
     make_database(platform)
-    restore_platform(platform, folder, symlink)
+    restore_platform(platform, folder)
+
+def remove_cache(platform):
+    os.chdir(platform['claroline_root'])
+    cachePath = 'app/cache/'
+    cmd = 'rm -rf ' + cachePath + '*'
+    print 'Do you want to execute ' + cmd + ' ?'
+    conf = confirm()
+
+    if conf:
+        os.system(cmd)
+    else:
+        print 'Cache was not removed.'
 
 def remove(name):
+    platform = get_installed_platform(name)
     os.system('userdel -r ' + name)
     #remove the database
     cmd = "mysql -u root"
     if (mysql_root_pwd != None):
         cmd += " -p'" + mysql_root_pwd + "'"
-    cmd += " -e 'drop database " + name + "_prod;drop user '" + name + "'@'localhost';'"
+    cmd += " -e 'drop database " + platform['db_name'] + ";drop user '" + name + "'@'localhost';'"
     #print 'You probably want to execute the following command manually - this script does not fire it for some reason'
     print cmd
     os.system(cmd)
@@ -431,9 +450,7 @@ def create(name):
     make_database(platform)
 
     if (platform['base_platform'] != None):
-        base = get_installed_platform(platform['base_platform'])
-        os.system("ln -s " + base['claroline_root'] + "vendor " + platform["claroline_root"] + "vendor")
-        os.system('cp ' + base['claroline_root'] + 'app/config/bundles.ini ' + platform["claroline_root"] + 'app/config/bundles.ini')
+        set_symlink(platform)
     else:
         print 'firing composer...'
         os.chdir(platform['claroline_root'])
@@ -482,12 +499,12 @@ def restore(folder, symlink):
                 
     if (symlink):
         platform = get_installed_platform(symlink)
-        restore_platform(platform, folder, symlink)
+        restore_platform(platform, folder)
         names.remove(name)
     
     for name in names:
         platform = get_installed_platform(name)
-        restore_platform(platform, folder, symlink)
+        restore_platform(platform, folder)
         
 def migrate (folder, symlink):
     names = check_restore(folder, symlink)
@@ -539,11 +556,61 @@ elif args.action == 'dist-migrate':
     platforms = get_queried_platforms(args.name)
 
     for platform in platforms:
+        make_user(platform)
+        platformPath = __DIR__ + '/platforms/' + platform['name'] + '.yml'
+
+        with open(platformPath, 'r') as stream:
+            platform = yaml.load(stream)
+        
+        platform['user_home'] = '/home/' + platform['name'] + '/'
+        platform['claroline_root'] = platform['user_home'] + 'claroline/'
+        platform['db_name'] = platform['db_dist_name']
+        platform['base_platform'] = args.symlink
+        platform['token'] = os.popen("apg -a 1 -m 50 -n 1 -MCLN").read().rstrip()
+        data_yaml = yaml.dump(platform, default_flow_style=False)
+        paramFile = open(platformPath, 'w')
+        paramFile.write(data_yaml)
+
         dist_location = platform['remote_srv'] + ':' + platform['remote_loc']
-        os.system('rsync --progress -e ssh -az  ' + dist_location + ' ' + platform['user_home'] + '/claroline/')
-        command = "mysqldump --verbose --no-create-db --opt " + platform['db_dist_name'] + " -u " + args.name + " --password='" + platform['db_dist_pwd'] + "' > " + platform['user_home'] + 'sqldump.sql'
-        os.system('ssh ' + platform['remote_srv'] + ' ' + command)
-    
+        rsyncCmd = 'rsync --progress -e ssh -az ' + dist_location + '* ' + platform['claroline_root']
+        print rsyncCmd
+        os.system(rsyncCmd)
+        os.system('rm ' + platform['user_home'] + 'sqldump.sql') #you may want to comment this line
+        command = "mysqldump --verbose --opt " + platform['db_dist_name'] + " -u " + args.name + " --password='" + platform['db_dist_pwd'] + "' > " + platform['user_home'] + 'sqldump.sql'
+        sshCmd = 'ssh ' + platform['remote_srv'] + ' ' + command
+        print sshCmd
+        os.system(sshCmd)
+
+        #Drop the database if it exists
+        print 'Drop the database if it exists...'
+        cmd = "mysql -u root"
+        if (mysql_root_pwd != None):
+            cmd += " -p'" + mysql_root_pwd + "'"
+        cmd += " -e 'drop database if exists " + platform['db_name'] + ";drop user '" + platform['name'] + "'@'localhost';'"
+        #print 'You probably want to execute the following command manually - this script does not fire it for some reason'
+        print cmd
+        os.system(cmd)
+
+        #Import the database
+        print 'Restoring the database...'
+        make_database(platform)
+        sqlPath = platform['user_home'] + 'sqldump.sql'
+        
+        if (not os.path.exists(sqlPath)):
+            raise Exception(sqlPath + ' does not exists.')
+            
+        run_sql(platform['db_name'] + ' < ' + sqlPath, False)
+        remove_cache(platform)
+        set_permissions(platform)
+        print 'Changes your dns to apply changes...'
+        print 'Check the permissions were correct...'
+
+    #link the vendor directory
+    for platform in platforms:
+        if (platform['base_platform'] == args.symlink):
+            set_symlink(platform)
+
+
 ### THE NAME IS REQUIRED FOR EVERY OTHER ACTION
 
 if (not args.name):
@@ -562,7 +629,7 @@ elif args.action == 'remove':
     platforms = get_queried_platforms(args.name)
     
     for platform in platforms:
-        remove(args.name)
+        remove(platform['name'])
     
 elif args.action == 'backup':
     platforms = get_queried_platforms(args.name)
@@ -591,9 +658,7 @@ elif args.action == 'perm':
     platforms = get_queried_platforms(args.name)
 
     for platform in platforms:
-        command = 'sh ' + permissions_script + ' ' + platform['claroline_root']
-        print command
-        os.system(command)
+        set_permissions(platform)
 
 elif args.action == 'console':
     platforms = get_queried_platforms(args.name)
@@ -634,6 +699,6 @@ elif args.action == 'check-configs':
         paramFile.write(data_yaml)
 
 else:
-    print "INVALID PARAMETERS"
+    print "DONE !"
 
 

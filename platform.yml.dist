@@ -7,3 +7,8 @@ ecole_admin_pwd: ~
 name: PLATFORM_NAME
 token: ~
 user_home: ~
+#if you want to remotely migrate a platform
+remote_srv: ~
+remote_loc: ~
+db_dist_name: ~
+db_dist_platform: ~

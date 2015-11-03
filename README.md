@@ -7,7 +7,7 @@
 - apg
 - zip
 - git
-- zip
+- ssh (optionnaly)
 
 You can install them with apt-get
 
@@ -44,6 +44,12 @@ You can install them with apt-get
 
 #### MIGRATE
 - sudo python claroline.py migrate --restore=FOLDER [--symlink=BASE_PLATFORM]
+
+#### DIST MIGRATE (requires root account)
+- sudo su
+- ssh-agent /bin/bash
+- ssh-add /path/to/key
+- python claroline.py dist-migrate --name=PLATFORM_NAME [--symlink=BASE_PLATFORM]
 
 ### TODO
 - hooks
