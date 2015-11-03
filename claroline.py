@@ -94,6 +94,7 @@ parser.add_argument('-nc', '--noconfirm', action='store_true', help=help_confirm
 parser.add_argument('-f', '--force', action='store_true', help=help_force)
 parser.add_argument('-srv', '--srv', help=help_server)
 parser.add_argument('-d', '--dismisschild', action='store_true', help=help_dismiss)
+parser.add_argument('-idb', '--ignoredatabase', action='store_true')
 args = parser.parse_args()
 
 #############
@@ -317,11 +318,11 @@ def set_parameters(platform):
     with open(parametersPath, 'r') as stream:
         parameters = yaml.load(stream)
         
-    rangeKeys = yaml.load(parameters['parameters']['chosenRangeKeys'])
+    #rangeKeys = yaml.load(parameters['parameters']['chosenRangeKeys'])
     parameters['parameters']['database_password'] = platform['db_pwd']
     parameters['parameters']['database_name'] = platform['db_name']
     parameters['parameters']['database_user'] = platform['name']
-    parameters['parameters']['chosenRangeKeys'] = rangeKeys
+    parameters['parameters']['chosenRangeKeys'] = []
     data_yaml = yaml.dump(parameters, default_flow_style=False)
     paramFile = open(parametersPath, 'w')
     paramFile.write(data_yaml)
@@ -627,21 +628,22 @@ elif args.action == 'dist-migrate':
         #Import the database
         print 'Restoring the database...'
         make_database(platform)
-        sqlPath = platform['user_home'] + 'sqldump.sql'
+        if not args.ignoredatabase:
+            sqlPath = platform['user_home'] + 'sqldump.sql'
         
-        if (not os.path.exists(sqlPath)):
-            raise Exception(sqlPath + ' does not exists.')
+            if (not os.path.exists(sqlPath)):
+                raise Exception(sqlPath + ' does not exists.')
             
-        run_sql(platform['db_name'] + ' < ' + sqlPath, False)
+            run_sql(platform['db_name'] + ' < ' + sqlPath, False)
         remove_cache(platform)
         set_permissions(platform)
         print 'Changes your dns to apply changes...'
         print 'Check the permissions were correct...'
 
     #link the vendor directory
-    for platform in platforms:
-        if platform['base_platform']:
-            set_symlink(platform)
+    #for platform in platforms:
+    #    if platform['base_platform']:
+    #        set_symlink(platform)
 
 
 ### THE NAME IS REQUIRED FOR EVERY OTHER ACTION
