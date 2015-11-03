@@ -137,6 +137,15 @@ def run_sql(instructions, plainText = True):
     print(mysql_cmd)
     os.system(mysql_cmd)
 
+def get_base_platforms(platforms):
+    base = []
+
+    for platform in platforms:
+        if (platform['base_platform'] == platform['name'] or platform['base_platform'] == None):
+            base.append(platform)
+
+    return base 
+
 def get_installed_platforms():
     platforms = []
 
@@ -662,7 +671,11 @@ elif args.action == 'backup':
         backup_files(platform)
         backup_database(platform)
 
-    backup_sources(get_installed_platform(args.name))
+    basePlatforms = get_base_platforms(platforms)
+
+    for basePlatform in basePlatforms:
+        backup_sources(basePlatform)
+
     os.system('mkdir -p ' + backup_directory + '/' + __DATE__)
     os.system('mv ' + backup_tmp + '/* ' + backup_directory + '/' + __DATE__ + '/')
 
@@ -727,5 +740,3 @@ elif args.action == "symlink":
 
 else:
     print "DONE !"
-
-
