@@ -61,7 +61,7 @@ You can install them with apt-get
 - zip platforms.zip platforms/*
 - scp login@server:/path/to/platforms.zip platforms.zip
 - unzip platforms.zip
-- python claroline.py param-migrate --name=PLATFORM_NAME --server=LOGIN@SERVER [--force] [-d]
+- python claroline.py param-migrate --name=PLATFORM_NAME --srv=LOGIN@SERVER [--force] [-d]
 
 ### TODO
 - hooks
