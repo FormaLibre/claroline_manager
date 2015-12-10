@@ -218,7 +218,7 @@ def backup_sources(platform):
     os.chdir(platform['claroline_root'])
     print 'Backing up sources for ' + name +'...'
     zip_name = name + '@' + __DATE__ + '.source.zip'
-    command = 'zip -r -q ' + backup_tmp + '/' + zip_name + ' vendor'
+    command = 'zip -r ' + backup_tmp + '/' + zip_name + ' vendor'
     os.system(command)
 
 def backup_files(platform):
@@ -226,7 +226,7 @@ def backup_files(platform):
     os.chdir(platform['claroline_root'])
     print 'backing up the platform files for ' + name + '...'
     zip_name = name + '@' + __DATE__ + '.file.zip'
-    command = 'zip -r -q '
+    command = 'zip -r '
     command += backup_tmp + '/' + zip_name + ' '
 
     for directory in __BACKUP__:
