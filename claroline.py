@@ -45,6 +45,7 @@ help_action = """
     warm:          Warm the cache.
     console:       Runs a claroline console command.
     param-migrate  Build the parameters files for a migration.
+    refresh        Refresh assets and fire assetic:dump.
 """
 
 help_name = """
@@ -80,7 +81,7 @@ help_force = """
 """
 
 help_confirm = """
-    Doesn't prompt any confirmation
+    Doesn't prompt any confirmation.
 """
 
 parser = argparse.ArgumentParser("Allow you to manage claroline platforms.", formatter_class=argparse.RawTextHelpFormatter)
@@ -166,31 +167,34 @@ def get_installed_platform(name):
             return platform
            
 def get_queried_platforms(name):
-    names = name.split(",") 
-    baseList  = []
+    if name == 'all':
+        platforms = get_installed_platforms()
+    else:
+        names = name.split(",") 
+        baseList  = []
 
-    for name in names:
-        base = get_installed_platform(name)
-        if base:
-            baseList.append(base)
+        for name in names:
+            base = get_installed_platform(name)
+            if base:
+                baseList.append(base)
 
-    for base in baseList:
-        if (base and base['base_platform'] != None and not args.force):
-            print 'Please run the action ' + args.action + ' on the ' + base['base_platform'] + ' platform instead.'
-            raise Exception('The platform ' + name + ' uses ' + base['base_platform'] + ' as base with symlink.')
+        for base in baseList:
+            if (base and base['base_platform'] != None and not args.force):
+                print 'Please run the action ' + args.action + ' on the ' + base['base_platform'] + ' platform instead.'
+                raise Exception('The platform ' + name + ' uses ' + base['base_platform'] + ' as base with symlink.')
 
-    platforms = []
-    installed = get_installed_platforms()
+        platforms = []
+        installed = get_installed_platforms()
 
-    if not args.dismisschild:           
-        for platform in installed:
-            for base in baseList:
-                if platform['base_platform'] != None and platform['base_platform'] == base['name']:
-                    platforms.append(platform)
+        if not args.dismisschild:           
+            for platform in installed:
+                for base in baseList:
+                    if platform['base_platform'] != None and platform['base_platform'] == base['name']:
+                        platforms.append(platform)
 
-    for base in baseList:
-        if not base in platforms:
-            platforms.append(base)
+        for base in baseList:
+            if not base in platforms:
+                platforms.append(base)
 
     print 'The action ' + args.action + ' will be executed on:'    
 
@@ -504,7 +508,7 @@ def install(name):
     claroline_console(platform,  "claroline:user:create -a Admin Claroline clacoAdmin " + claro_admin_pwd + ' ' + claro_admin_email)
     claroline_console(platform,  "claroline:user:create -a Admin " + platform["name"] + " " + platform["name"] + "Admin " + platform["ecole_admin_pwd"] + ' some_other_email')
     #uncomment the following line if you want to fire the permission script
-    #os.system("bash " + __DIR__ + "/permissions.sh " + platform["claroline_root"]")
+    os.system("bash " + __DIR__ + "/permissions.sh " + platform["claroline_root"])
     operationsPath = platform['claroline_root'] + 'app/config/operations.xml'
     
     if os.path.exists(operationsPath):
@@ -550,7 +554,14 @@ def migrate (folder, symlink):
     
     for name in names:
         migrate_platform(name, folder, symlink)
-    
+
+def refresh(platform):
+    print 'cd ' + platform['claroline_root']
+    os.chdir(platform['claroline_root'])
+    claroline_console(platform, "assets:install")
+    claroline_console(platform, "assetic:dump")
+    os.system("bash " + __DIR__ + "/permissions.sh " + platform["claroline_root"])
+
 ######################################################
 # THIS IS WHERE THE FUN BEGINS: HERE ARE THE ACTIONS #
 ######################################################
@@ -739,6 +750,12 @@ elif args.action == "symlink":
 
     for platform in platforms:
         set_symlink(platform)
+
+elif args.action == 'refresh':
+    platforms = get_queried_platforms(args.name)
+
+    for platform in platforms:
+        refresh(platform)
 
 else:
     print "DONE !"
