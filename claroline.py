@@ -29,23 +29,24 @@ webserver          = parameters['webserver']
 help_action = """
     This script should be used as root. Be carreful.
 
-    init:          Initialize the temporary directories for this script and commit the changes of the .dist files.
-    param:         Create a new file containing a platform installation parameters (see the platforms directory).
-    create:        Create the platform datatree (with symlink or runs composer). This will also add a new database, a new database user, a new user and a new vhost.
-    install:       Install a platform.
-    build          Fires the param, create and install method for a platform.
-    backup:        Generates a backup.
-    remove:        Removes a platform.
-    update:        Update a platform.
-    update-light:  Update a platform without claroline:update.
-    restore:       Restore platforms.
-    migrate:       Migrate platforms.
-    dist-migrate:  Migrate from a remote server.
-    perm:          Fire the permission script for a platform.
-    warm:          Warm the cache.
-    console:       Runs a claroline console command.
-    param-migrate  Build the parameters files for a migration.
-    refresh        Refresh assets and fire assetic:dump.
+    init:           Initialize the temporary directories for this script and commit the changes of the .dist files.
+    param:          Create a new file containing a platform installation parameters (see the platforms directory).
+    create:         Create the platform datatree (with symlink or runs composer). This will also add a new database, a new database user, a new user and a new vhost.
+    install:        Install a platform.
+    build           Fires the param, create and install method for a platform.
+    backup:         Generates a backup.
+    remove:         Removes a platform.
+    update:         Update a platform.
+    update-light:   Update a platform without claroline:update.
+    restore:        Restore platforms.
+    migrate:        Migrate platforms.
+    dist-migrate:   Migrate from a remote server.
+    remote-db-dump: Retrieve the database from the remote server.
+    perm:           Fire the permission script for a platform.
+    warm:           Warm the cache.
+    console:        Runs a claroline console command.
+    param-migrate   Build the parameters files for a migration.
+    refresh         Refresh assets and fire assetic:dump.
 """
 
 help_name = """
@@ -562,6 +563,12 @@ def refresh(platform):
     claroline_console(platform, "assetic:dump")
     os.system("bash " + __DIR__ + "/permissions.sh " + platform["claroline_root"])
 
+def remote_database_dump(platform):
+    command = "mysqldump --verbose --opt " + platform['db_dist_name'] + " -u " + platform['name'] + " --password='" + platform['db_dist_pwd'] + "' > " + platform['name'] + '.sql'
+    sshCmd = 'ssh ' + platform['remote_srv'] + ' ' + command
+    print sshCmd
+    os.system(sshCmd)
+
 ######################################################
 # THIS IS WHERE THE FUN BEGINS: HERE ARE THE ACTIONS #
 ######################################################
@@ -732,6 +739,7 @@ elif args.action == 'build':
     install(args.name)
     
 elif args.action == 'param-migrate':
+    print "Something may be wrong on this method. Please check the db_dist_name & pw."
     base_platform = args.name
     platforms = get_queried_platforms(args.name)
     
@@ -756,6 +764,12 @@ elif args.action == 'refresh':
 
     for platform in platforms:
         refresh(platform)
+
+elif args.action == 'remote-db-dump':
+    platforms = get_queried_platforms(args.name)
+
+    for platform in platforms:
+        remote_database_dump(platform)
 
 else:
     print "DONE !"
