@@ -7,6 +7,8 @@
 - apg
 - zip
 - git
+- npm
+- node
 - ssh (optionnaly)
 
 You can install them with apt-get

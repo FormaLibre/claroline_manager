@@ -271,9 +271,7 @@ def update_composer(platform):
 
 def update_claroline(platform):
     update_claroline_light(platform)
-    #claroline_console(platform, 'cache:warm')
-    claroline_console(platform, 'claroline:update')
-    claroline_console(platform, 'assets:install')
+    refresh(platform)
 
 def update_claroline_light(platform):
     os.chdir(platform['claroline_root'])
@@ -432,6 +430,15 @@ def remove_cache(platform):
     else:
         print 'Cache was not removed.'
 
+def npm_build(platform):
+    os.chdir(platform['claroline_root'])
+    cmd = "npm install"
+    print cmd
+    os.system(cmd)
+    cmd = "npm run build"
+    print cmd
+    os.system(cmd)
+
 def remove(name):
     platform = get_installed_platform(name)
     os.system('userdel -r ' + name)
@@ -504,16 +511,14 @@ def install(name):
     print 'cd ' + platform['claroline_root']
     os.chdir(platform['claroline_root'])
     claroline_console(platform, "claroline:install")
-    claroline_console(platform, "assets:install --symlink")
-    claroline_console(platform, "assetic:dump")
     claroline_console(platform,  "claroline:user:create -a Admin Claroline clacoAdmin " + claro_admin_pwd + ' ' + claro_admin_email)
     claroline_console(platform,  "claroline:user:create -a Admin " + platform["name"] + " " + platform["name"] + "Admin " + platform["ecole_admin_pwd"] + ' some_other_email')
-    #uncomment the following line if you want to fire the permission script
-    os.system("bash " + __DIR__ + "/permissions.sh " + platform["claroline_root"])
     operationsPath = platform['claroline_root'] + 'app/config/operations.xml'
     
     if os.path.exists(operationsPath):
         os.remove(operationsPath)
+
+    refresh(platform)
         
 def restore(folder, symlink):
     names = check_restore(folder, symlink)
@@ -561,6 +566,7 @@ def refresh(platform):
     os.chdir(platform['claroline_root'])
     claroline_console(platform, "assets:install")
     claroline_console(platform, "assetic:dump")
+    npm_build(platform)
     os.system("bash " + __DIR__ + "/permissions.sh " + platform["claroline_root"])
 
 def remote_database_dump(platform):
