@@ -25,6 +25,7 @@ platform_dir       = __DIR__ + '/platforms'
 operations_dir     = __DIR__ + '/operations'
 permissions_script = __DIR__ + '/permissions.sh'
 webserver          = parameters['webserver']
+claroline_src      = parameters['claroline_src']
 
 help_action = """
     This script should be used as root. Be carreful.
@@ -32,7 +33,6 @@ help_action = """
     init:           Initialize the temporary directories for this script and commit the changes of the .dist files.
     param:          Create a new file containing a platform installation parameters (see the platforms directory).
     create:         Create the platform datatree (with symlink or runs composer). This will also add a new database, a new database user, a new user and a new vhost.
-    install:        Install a platform.
     build           Fires the param, create and install method for a platform.
     backup:         Generates a backup.
     remove:         Removes a platform.
@@ -305,7 +305,22 @@ def make_user(platform):
 		print 'nginx is not supported yet. Please create your vhost manually or make a pr at https://github.com/FormaLibre/claroline_manager to handle this webserver.'
     else:
 		print 'The webserver ' + args.webserver + ' is unknwown.'
+
+    download_base(platform)
         
+def download_base(platform):
+    os.chdir(platform['user_home'])
+    cmd = 'wget http://packages.claroline.net/releases/' + claroline_src + '.zip'
+    #cmd = 'cp /home/nico/' + claroline_src + '.zip .'
+    print cmd
+    os.system(cmd)
+    cmd = 'unzip ' + claroline_src + '.zip'
+    os.system(cmd)
+    print cmd
+    cmd = 'mv ' + claroline_src + ' ' + platform['claroline_root']
+    os.system(cmd)
+    print cmd
+	
 def make_database(platform):
     # Create database
     input  = open(__DIR__ + "/files/create-db.sql", 'r')
@@ -313,7 +328,6 @@ def make_database(platform):
     clean  = input.read().replace("NEWUSER", platform["name"]).replace("PASSWD", platform["db_pwd"]).replace('NEW_DATABASE', platform['db_name'])
     output.write(clean)
     run_sql(clean)
-    set_parameters(platform)
     
 def set_parameters(platform):
     parametersPath = platform['claroline_root'] + 'app/config/parameters.yml'
@@ -432,10 +446,7 @@ def remove_cache(platform):
 
 def npm_build(platform):
     os.chdir(platform['claroline_root'])
-    cmd = "npm install"
-    print cmd
-    os.system(cmd)
-    cmd = "npm run build"
+    cmd = "composer run build"
     print cmd
     os.system(cmd)
 
@@ -463,6 +474,7 @@ def remove(name):
         os.remove(platform_dir + '/' + name + '.yml')
 
 def param(name, symlink):
+    print 'Building param file...'
     if (symlink and not get_installed_platform(symlink)):
         raise Exception('The base platform ' + symlink + ' doesn''t exists.')
 	
@@ -493,24 +505,26 @@ def param(name, symlink):
     
 def create(name):
     platform = get_installed_platform(name)
-    make_user(platform)
-    make_database(platform)
+    #make_user(platform)
+    #make_database(platform)
+    #set_parameters(platform)
 
     if (platform['base_platform'] != None):
         set_symlink(platform)
-    else:
-        print 'firing composer...'
         os.chdir(platform['claroline_root'])
-        cmd = 'composer update --prefer-dist --no-dev'
-        print os.system(cmd)
-    
-    print platform["name"] + " created !"
-    
-def install(name):
-    platform = get_installed_platform(name)
-    print 'cd ' + platform['claroline_root']
-    os.chdir(platform['claroline_root'])
-    claroline_console(platform, "claroline:install")
+        claroline_console(platform, "claroline:install")
+        refresh(platform)
+    else:
+        os.chdir(platform['claroline_root'])
+        print os.getcwd()
+        cmd = 'COMPOSER_PROCESS_TIMEOUT=3600 '
+        cmd = cmd + 'composer run sync -vvv'
+        print cmd
+        #os.system(cmd)
+
+        
+        claroline_console(platform, "claroline:install")
+
     claroline_console(platform,  "claroline:user:create -a Admin Claroline clacoAdmin " + claro_admin_pwd + ' ' + claro_admin_email)
     claroline_console(platform,  "claroline:user:create -a Admin " + platform["name"] + " " + platform["name"] + "Admin " + platform["ecole_admin_pwd"] + ' some_other_email')
     operationsPath = platform['claroline_root'] + 'app/config/operations.xml'
@@ -518,8 +532,8 @@ def install(name):
     if os.path.exists(operationsPath):
         os.remove(operationsPath)
 
-    refresh(platform)
-        
+    print platform["name"] + " created !"
+    
 def restore(folder, symlink):
     names = check_restore(folder, symlink)
     
@@ -681,9 +695,6 @@ if args.action == "param":
 elif args.action == "create":
     create(args.name)
 
-elif args.action == "install":
-    install(args.name)
-    
 elif args.action == 'remove':
     platforms = get_queried_platforms(args.name)
     
@@ -742,7 +753,6 @@ elif args.action == 'warm':
 elif args.action == 'build':
     param(args.name, args.symlink)
     create(args.name)
-    install(args.name)
     
 elif args.action == 'param-migrate':
     print "Something may be wrong on this method. Please check the db_dist_name & pw."
