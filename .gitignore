@@ -2,6 +2,7 @@ tmp/*
 claroline.yml
 platforms/*
 backups/*
+composer/*
 operations/*
 masters.yml.dist
 platform_options.yml.dist

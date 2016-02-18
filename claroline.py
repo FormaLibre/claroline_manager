@@ -85,6 +85,10 @@ help_confirm = """
     Doesn't prompt any confirmation.
 """
 
+help_composer = """
+    Specify a composer file.
+"""
+
 parser = argparse.ArgumentParser("Allow you to manage claroline platforms.", formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("action", help=help_action)
 parser.add_argument('-n', '--name', help=help_name)
@@ -97,6 +101,7 @@ parser.add_argument('-f', '--force', action='store_true', help=help_force)
 parser.add_argument('-srv', '--srv', help=help_server)
 parser.add_argument('-d', '--dismisschild', action='store_true', help=help_dismiss)
 parser.add_argument('-idb', '--ignoredatabase', action='store_true')
+parser.add_argument('-C', '--composer', action='store_true', help=help_composer)
 args = parser.parse_args()
 
 #############
@@ -505,9 +510,9 @@ def param(name, symlink):
     
 def create(name):
     platform = get_installed_platform(name)
-    #make_user(platform)
-    #make_database(platform)
-    #set_parameters(platform)
+    make_user(platform)
+    make_database(platform)
+    set_parameters(platform)
 
     if (platform['base_platform'] != None):
         set_symlink(platform)
@@ -517,20 +522,12 @@ def create(name):
     else:
         os.chdir(platform['claroline_root'])
         print os.getcwd()
-        cmd = 'COMPOSER_PROCESS_TIMEOUT=3600 '
-        cmd = cmd + 'composer run sync -vvv'
+        cmd = 'composer run fast-install -vvv'
         print cmd
-        #os.system(cmd)
-
-        
-        claroline_console(platform, "claroline:install")
+        os.system(cmd)
 
     claroline_console(platform,  "claroline:user:create -a Admin Claroline clacoAdmin " + claro_admin_pwd + ' ' + claro_admin_email)
     claroline_console(platform,  "claroline:user:create -a Admin " + platform["name"] + " " + platform["name"] + "Admin " + platform["ecole_admin_pwd"] + ' some_other_email')
-    operationsPath = platform['claroline_root'] + 'app/config/operations.xml'
-    
-    if os.path.exists(operationsPath):
-        os.remove(operationsPath)
 
     print platform["name"] + " created !"
     
