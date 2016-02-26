@@ -315,11 +315,11 @@ def make_user(platform):
         
 def download_base(platform):
     os.chdir(platform['user_home'])
-    cmd = 'wget http://packages.claroline.net/releases/' + claroline_src + '.zip'
+    cmd = 'wget http://packages.claroline.net/releases/' + claroline_src + '.tar.gz'
     #cmd = 'cp /home/nico/' + claroline_src + '.zip .'
     print cmd
     os.system(cmd)
-    cmd = 'unzip ' + claroline_src + '.zip'
+    cmd = 'tar -xvf ' + claroline_src + '.tar.gz'
     os.system(cmd)
     print cmd
     cmd = 'mv ' + claroline_src + ' ' + platform['claroline_root']
@@ -335,6 +335,8 @@ def make_database(platform):
     run_sql(clean)
     
 def set_parameters(platform):
+    cmd = 'cp ' + platform['claroline_root'] + 'app/config/parameters.yml.dist ' + platform['claroline_root'] + 'app/config/parameters.yml'
+    os.system(cmd)
     parametersPath = platform['claroline_root'] + 'app/config/parameters.yml'
 
     with open(parametersPath, 'r') as stream:
@@ -522,9 +524,11 @@ def create(name):
     else:
         os.chdir(platform['claroline_root'])
         print os.getcwd()
-        cmd = 'composer run fast-install -vvv'
-        print cmd
-        os.system(cmd)
+        #cmd = 'composer run fast-install -vvv'
+	cmd = 'rm -rf app/cache/*'
+	print cmd
+	os.system(cmd)
+	claroline_console(platform, "claroline:install")
 
     claroline_console(platform,  "claroline:user:create -a Admin Claroline clacoAdmin " + claro_admin_pwd + ' ' + claro_admin_email)
     claroline_console(platform,  "claroline:user:create -a Admin " + platform["name"] + " " + platform["name"] + "Admin " + platform["ecole_admin_pwd"] + ' some_other_email')
