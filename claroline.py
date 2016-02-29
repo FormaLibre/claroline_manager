@@ -599,8 +599,6 @@ if args.action == "init":
     os.system('mkdir -p ' + platform_dir)
     os.system('mkdir ' + __DIR__ + '/tmp')
     os.system('mkdir -p ' + operations_dir)
-    os.system('cp ' + __DIR__ + '/platform_options.yml.dist ' + __DIR__ + '/skel/claroline/app/config/platform_options.yml')
-    os.system('cp ' + __DIR__ + '/masters.yml.dist ' + __DIR__ + '/skel/claroline/app/config/masters.yml')
     os.system('cp ' + __DIR__ + '/vhost.conf.dist ' + __DIR__ + '/files/vhost.conf')
     #touch
     open(__DIR__ + '/.init', 'a').close()
