@@ -38,6 +38,7 @@ help_action = """
     remove:        Removes a platform.
     update:        Update a platform.
     update-light:  Update a platform without claroline:update.
+    update-root:   Update the root directory.
     restore:       Restore platforms.
     migrate:       Migrate platforms.
     dist-migrate:  Migrate from a remote server.
@@ -257,10 +258,17 @@ def base_update(name):
 
     #print 'Copying operations.xml and bundles.ini...'
     for platform in platforms:
-        os.system('cp ' + base['claroline_root'] + 'app/config/operations.xml ' + platform['claroline_root'] + 'app/config/operations.xml')
+        os.system('cp ' + base['claroline_root'] + 'app/config/previous-installed.json ' + platform['claroline_root'] + 'app/config/previous-installed.json')
         os.system('cp ' + base['claroline_root'] + 'app/config/bundles.ini ' + platform['claroline_root'] + 'app/config/bundles.ini')
         
     return platforms
+
+def update_root_dir(platform):
+    os.chdir(platform['claroline_root'])
+    cmd = 'sh '+ __DIR__ + '/files/update.sh'
+    print cmd
+    os.system(cmd)
+    print 'Please merge the composer.json manually'
 
 def update_composer(platform):
     print 'Starting composer...'
@@ -664,7 +672,10 @@ if (not args.name):
 
 if args.action == "param":
     param(args.name, args.symlink)
-    
+
+elif args.action == 'update-root':
+    update_root_dir(get_installed_platform(args.name))
+
 elif args.action == "create":
     create(args.name)
 
