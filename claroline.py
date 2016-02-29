@@ -524,11 +524,11 @@ def create(name):
     else:
         os.chdir(platform['claroline_root'])
         print os.getcwd()
-        #cmd = 'composer run fast-install -vvv'
-	cmd = 'rm -rf app/cache/*'
+        cmd = 'composer run fast-install -vvv'
+	#cmd = 'rm -rf app/cache/*'
 	print cmd
 	os.system(cmd)
-	claroline_console(platform, "claroline:install")
+	#claroline_console(platform, "claroline:install")
 
     claroline_console(platform,  "claroline:user:create -a Admin Claroline clacoAdmin " + claro_admin_pwd + ' ' + claro_admin_email)
     claroline_console(platform,  "claroline:user:create -a Admin " + platform["name"] + " " + platform["name"] + "Admin " + platform["ecole_admin_pwd"] + ' some_other_email')
