@@ -25,6 +25,7 @@ platform_dir       = __DIR__ + '/platforms'
 operations_dir     = __DIR__ + '/operations'
 permissions_script = __DIR__ + '/permissions.sh'
 webserver          = parameters['webserver']
+claroline_src      = parameters['claroline_src']
 
 help_action = """
     This script should be used as root. Be carreful.
@@ -85,6 +86,10 @@ help_confirm = """
     Doesn't prompt any confirmation.
 """
 
+help_composer = """
+    Specify a composer file.
+"""
+
 parser = argparse.ArgumentParser("Allow you to manage claroline platforms.", formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument("action", help=help_action)
 parser.add_argument('-n', '--name', help=help_name)
@@ -97,6 +102,7 @@ parser.add_argument('-f', '--force', action='store_true', help=help_force)
 parser.add_argument('-srv', '--srv', help=help_server)
 parser.add_argument('-d', '--dismisschild', action='store_true', help=help_dismiss)
 parser.add_argument('-idb', '--ignoredatabase', action='store_true')
+parser.add_argument('-C', '--composer', action='store_true', help=help_composer)
 args = parser.parse_args()
 
 #############
@@ -278,9 +284,7 @@ def update_composer(platform):
 
 def update_claroline(platform):
     update_claroline_light(platform)
-    #claroline_console(platform, 'cache:warm')
-    claroline_console(platform, 'claroline:update')
-    claroline_console(platform, 'assets:install')
+    refresh(platform)
 
 def update_claroline_light(platform):
     os.chdir(platform['claroline_root'])
@@ -314,7 +318,22 @@ def make_user(platform):
 		print 'nginx is not supported yet. Please create your vhost manually or make a pr at https://github.com/FormaLibre/claroline_manager to handle this webserver.'
     else:
 		print 'The webserver ' + args.webserver + ' is unknwown.'
+
+    download_base(platform)
         
+def download_base(platform):
+    os.chdir(platform['user_home'])
+    cmd = 'wget http://packages.claroline.net/releases/' + claroline_src + '.tar.gz'
+    #cmd = 'cp /home/nico/' + claroline_src + '.zip .'
+    print cmd
+    os.system(cmd)
+    cmd = 'tar -xvf ' + claroline_src + '.tar.gz'
+    os.system(cmd)
+    print cmd
+    cmd = 'mv ' + claroline_src + ' ' + platform['claroline_root']
+    os.system(cmd)
+    print cmd
+	
 def make_database(platform):
     # Create database
     input  = open(__DIR__ + "/files/create-db.sql", 'r')
@@ -322,9 +341,10 @@ def make_database(platform):
     clean  = input.read().replace("NEWUSER", platform["name"]).replace("PASSWD", platform["db_pwd"]).replace('NEW_DATABASE', platform['db_name'])
     output.write(clean)
     run_sql(clean)
-    set_parameters(platform)
     
 def set_parameters(platform):
+    cmd = 'cp ' + platform['claroline_root'] + 'app/config/parameters.yml.dist ' + platform['claroline_root'] + 'app/config/parameters.yml'
+    os.system(cmd)
     parametersPath = platform['claroline_root'] + 'app/config/parameters.yml'
 
     with open(parametersPath, 'r') as stream:
@@ -439,6 +459,12 @@ def remove_cache(platform):
     else:
         print 'Cache was not removed.'
 
+def npm_build(platform):
+    os.chdir(platform['claroline_root'])
+    cmd = "composer run build"
+    print cmd
+    os.system(cmd)
+
 def remove(name):
     platform = get_installed_platform(name)
     os.system('userdel -r ' + name)
@@ -463,6 +489,7 @@ def remove(name):
         os.remove(platform_dir + '/' + name + '.yml')
 
 def param(name, symlink):
+    print 'Building param file...'
     if (symlink and not get_installed_platform(symlink)):
         raise Exception('The base platform ' + symlink + ' doesn''t exists.')
 	
@@ -495,33 +522,27 @@ def create(name):
     platform = get_installed_platform(name)
     make_user(platform)
     make_database(platform)
+    set_parameters(platform)
 
     if (platform['base_platform'] != None):
         set_symlink(platform)
-    else:
-        print 'firing composer...'
         os.chdir(platform['claroline_root'])
-        cmd = 'composer update --prefer-dist --no-dev'
-        print os.system(cmd)
-    
-    print platform["name"] + " created !"
-    
-def install(name):
-    platform = get_installed_platform(name)
-    print 'cd ' + platform['claroline_root']
-    os.chdir(platform['claroline_root'])
-    claroline_console(platform, "claroline:install")
-    claroline_console(platform, "assets:install --symlink")
-    claroline_console(platform, "assetic:dump")
+        claroline_console(platform, "claroline:install")
+        refresh(platform)
+    else:
+        os.chdir(platform['claroline_root'])
+        print os.getcwd()
+        cmd = 'composer run fast-install -vvv'
+	#cmd = 'rm -rf app/cache/*'
+	print cmd
+	os.system(cmd)
+	#claroline_console(platform, "claroline:install")
+
     claroline_console(platform,  "claroline:user:create -a Admin Claroline clacoAdmin " + claro_admin_pwd + ' ' + claro_admin_email)
     claroline_console(platform,  "claroline:user:create -a Admin " + platform["name"] + " " + platform["name"] + "Admin " + platform["ecole_admin_pwd"] + ' some_other_email')
-    #uncomment the following line if you want to fire the permission script
-    os.system("bash " + __DIR__ + "/permissions.sh " + platform["claroline_root"])
-    operationsPath = platform['claroline_root'] + 'app/config/operations.xml'
+
+    print platform["name"] + " created !"
     
-    if os.path.exists(operationsPath):
-        os.remove(operationsPath)
-        
 def restore(folder, symlink):
     names = check_restore(folder, symlink)
     
@@ -568,7 +589,14 @@ def refresh(platform):
     os.chdir(platform['claroline_root'])
     claroline_console(platform, "assets:install")
     claroline_console(platform, "assetic:dump")
+    npm_build(platform)
     os.system("bash " + __DIR__ + "/permissions.sh " + platform["claroline_root"])
+
+def remote_database_dump(platform):
+    command = "mysqldump --verbose --opt " + platform['db_dist_name'] + " -u " + platform['name'] + " --password='" + platform['db_dist_pwd'] + "' > " + platform['name'] + '.sql'
+    sshCmd = 'ssh ' + platform['remote_srv'] + ' ' + command
+    print sshCmd
+    os.system(sshCmd)
 
 ######################################################
 # THIS IS WHERE THE FUN BEGINS: HERE ARE THE ACTIONS #
@@ -579,8 +607,6 @@ if args.action == "init":
     os.system('mkdir -p ' + platform_dir)
     os.system('mkdir ' + __DIR__ + '/tmp')
     os.system('mkdir -p ' + operations_dir)
-    os.system('cp ' + __DIR__ + '/platform_options.yml.dist ' + __DIR__ + '/skel/claroline/app/config/platform_options.yml')
-    os.system('cp ' + __DIR__ + '/masters.yml.dist ' + __DIR__ + '/skel/claroline/app/config/masters.yml')
     os.system('cp ' + __DIR__ + '/vhost.conf.dist ' + __DIR__ + '/files/vhost.conf')
     #touch
     open(__DIR__ + '/.init', 'a').close()
@@ -679,9 +705,6 @@ elif args.action == 'update-root':
 elif args.action == "create":
     create(args.name)
 
-elif args.action == "install":
-    install(args.name)
-    
 elif args.action == 'remove':
     platforms = get_queried_platforms(args.name)
     
@@ -740,9 +763,9 @@ elif args.action == 'warm':
 elif args.action == 'build':
     param(args.name, args.symlink)
     create(args.name)
-    install(args.name)
     
 elif args.action == 'param-migrate':
+    print "Something may be wrong on this method. Please check the db_dist_name & pw."
     base_platform = args.name
     platforms = get_queried_platforms(args.name)
     
@@ -767,6 +790,12 @@ elif args.action == 'refresh':
 
     for platform in platforms:
         refresh(platform)
+
+elif args.action == 'remote-db-dump':
+    platforms = get_queried_platforms(args.name)
+
+    for platform in platforms:
+        remote_database_dump(platform)
 
 else:
     print "DONE !"

@@ -2,10 +2,10 @@ tmp/*
 claroline.yml
 platforms/*
 backups/*
+composer/*
 operations/*
 masters.yml.dist
 platform_options.yml.dist
-skel/claroline/app/config/platform_options.yml
-skel/claroline/app/config/masters.yml
+skel/claroline/*
 .init
 
