@@ -324,13 +324,12 @@ def make_user(platform):
 def download_base(platform):
     os.chdir(platform['user_home'])
     cmd = 'wget http://packages.claroline.net/releases/' + claroline_src + '.tar.gz'
-    #cmd = 'cp /home/nico/' + claroline_src + '.zip .'
     print cmd
     os.system(cmd)
     cmd = 'tar -xvf ' + claroline_src + '.tar.gz'
     os.system(cmd)
     print cmd
-    cmd = 'mv ' + claroline_src + ' ' + platform['claroline_root']
+    cmd = 'mv ' + claroline_src + ' ' + platform['user_home'] + 'claroline'
     os.system(cmd)
     print cmd
 	
