@@ -323,13 +323,13 @@ def make_user(platform):
         
 def download_base(platform):
     os.chdir(platform['user_home'])
-    cmd = 'wget http://packages.claroline.net/releases/' + claroline_src + '.tar.gz'
+    cmd = 'wget http://packages.claroline.net/releases/' + claroline_src + '/claroline-' + claroline_src + '-prod.tar.gz'
     print cmd
     os.system(cmd)
-    cmd = 'tar -xvf ' + claroline_src + '.tar.gz'
+    cmd = 'tar -xvf claroline-' + claroline_src + '-prod.tar.gz'
     os.system(cmd)
     print cmd
-    cmd = 'mv ' + claroline_src + ' ' + platform['user_home'] + 'claroline'
+    cmd = 'mv claroline-' + claroline_src + '-prod ' + platform['user_home'] + 'claroline'
     os.system(cmd)
     print cmd
 	
@@ -532,13 +532,12 @@ def create(name):
         os.chdir(platform['claroline_root'])
         print os.getcwd()
         cmd = 'composer run fast-install -vvv'
-	#cmd = 'rm -rf app/cache/*'
 	print cmd
 	os.system(cmd)
-	#claroline_console(platform, "claroline:install")
 
     claroline_console(platform,  "claroline:user:create -a Admin Claroline clacoAdmin " + claro_admin_pwd + ' ' + claro_admin_email)
     claroline_console(platform,  "claroline:user:create -a Admin " + platform["name"] + " " + platform["name"] + "Admin " + platform["ecole_admin_pwd"] + ' some_other_email')
+    set_permissions(platform)
 
     print platform["name"] + " created !"
     

@@ -3,4 +3,5 @@ mysql_root_pwd: ~
 webserver: apache #nginx
 claro_admin_email: admin@changeme.com
 backup_directory: /path/to/bkp_dir
-claroline_src: claroline-connect-dev-master-
+claroline_src: 6.0.0
+type: prod
