@@ -267,6 +267,7 @@ def base_update(name):
     for platform in platforms:
         os.system('cp ' + base['claroline_root'] + 'app/config/previous-installed.json ' + platform['claroline_root'] + 'app/config/previous-installed.json')
         os.system('cp ' + base['claroline_root'] + 'app/config/bundles.ini ' + platform['claroline_root'] + 'app/config/bundles.ini')
+        set_permissions(platform)
         
     return platforms
 
@@ -285,18 +286,21 @@ def update_composer(platform):
     os.system('npm run bower')
     os.system('npm run themes')
     os.system('npm run webpack')
+    os.system('rm *.gzip')
 
 def update_claroline(platform):
     update_claroline_light(platform)
-    refresh(platform)
+    claroline_console(platform, 'assets:install')
 
 def update_claroline_light(platform):
     os.chdir(platform['claroline_root'])
+    os.system('rm -rf app/cache/*')
     print 'Updating platform ' + platform['name'] + '...'
     print 'php ' + platform['claroline_root'] + 'vendor/sensio/distribution-bundle/Sensio/Bundle/DistributionBundle/Resources/bin/build_bootstrap.php'
     command = 'rm -rf ' + platform['claroline_root'] + 'app/cache/*'
     print command
     os.system(command)
+    claroline_console(platform, 'claroline:update')
     
 def make_user(platform):
 
