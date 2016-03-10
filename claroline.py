@@ -289,8 +289,8 @@ def update_composer(platform):
     os.system('rm *.gzip')
 
 def update_claroline(platform):
-    update_claroline_light(platform)
     claroline_console(platform, 'assets:install')
+    update_claroline_light(platform)
 
 def update_claroline_light(platform):
     os.chdir(platform['claroline_root'])
@@ -380,11 +380,11 @@ def set_symlink(platform):
     if (base['name'] == platform['name']):
         print 'Platform ' + base['name'] + ' cannot symlink itself.'
         return
-    os.system("ln -s " + base['claroline_root'] + "vendor " + platform["claroline_root"] + "vendor")
-    os.system("ln -s " + base['claroline_root'] + "web/packages " + platform["claroline_root"] + "web/packages")
-    os.system("ln -s " + base['claroline_root'] + "web/dist " + platform["claroline_root"] + "web/dist")
-    os.system("ln -s " + base['claroline_root'] + "web/themes " + platform["claroline_root"] + "web/themes")
-    os.system("ln -s " + base['claroline_root'] + "node_modules " + platform["claroline_root"] + "node_modules")
+    os.system('rm -rf ' + platform['claroline_root'] + 'vendor')
+    os.system('rm -rf ' + platform['claroline_root'] + 'web/packages')
+    os.system('rm -rf ' + platform['claroline_root'] + 'web/dist')
+    os.system('rm -rf ' + platform['claroline_root'] + 'web/themes')
+    os.system('rm -rf ' + platform['claroline_root'] + 'node_modules')
     os.system('cp ' + base['claroline_root'] + 'app/config/bundles.ini ' + platform["claroline_root"] + 'app/config/bundles.ini')
 
 def check_restore(folder, symlink):
