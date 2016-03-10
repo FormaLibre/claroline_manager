@@ -27,3 +27,6 @@ do
   curl -fO $URL
 done
 
+mkdir scripts
+mv check.php scripts/
+mv save-repo.php scripts/

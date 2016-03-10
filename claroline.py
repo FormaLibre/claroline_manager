@@ -47,6 +47,7 @@ help_action = """
     warm:          Warm the cache.
     console:       Runs a claroline console command.
     param-migrate  Build the parameters files for a migration.
+    symlink        Set the symlinks for platforms file sharing.
     refresh        Refresh assets and fire assetic:dump.
 """
 
@@ -280,7 +281,10 @@ def update_composer(platform):
     print 'Starting composer...'
     os.chdir(platform['claroline_root'])
     os.system('composer update --prefer-dist --no-dev')
-    os.system('cp app/config/operations.xml ' + operations_dir + '/operations-' + args.name + '-' + __DATE__ + '.yml')
+    os.system('npm install')
+    os.system('npm run bower')
+    os.system('npm run themes')
+    os.system('npm run webpack')
 
 def update_claroline(platform):
     update_claroline_light(platform)
@@ -373,6 +377,10 @@ def set_symlink(platform):
         print 'Platform ' + base['name'] + ' cannot symlink itself.'
         return
     os.system("ln -s " + base['claroline_root'] + "vendor " + platform["claroline_root"] + "vendor")
+    os.system("ln -s " + base['claroline_root'] + "web/packages " + platform["claroline_root"] + "web/packages")
+    os.system("ln -s " + base['claroline_root'] + "web/dist " + platform["claroline_root"] + "web/dist")
+    os.system("ln -s " + base['claroline_root'] + "web/themes " + platform["claroline_root"] + "web/themes")
+    os.system("ln -s " + base['claroline_root'] + "node_modules " + platform["claroline_root"] + "node_modules")
     os.system('cp ' + base['claroline_root'] + 'app/config/bundles.ini ' + platform["claroline_root"] + 'app/config/bundles.ini')
 
 def check_restore(folder, symlink):
@@ -460,9 +468,10 @@ def remove_cache(platform):
 
 def npm_build(platform):
     os.chdir(platform['claroline_root'])
-    cmd = "composer run build"
-    print cmd
-    os.system(cmd)
+    os.system('npm install')
+    os.system('npm run bower')
+    os.system('npm run themes')
+    os.system('npm run webpack')
 
 def remove(name):
     platform = get_installed_platform(name)
