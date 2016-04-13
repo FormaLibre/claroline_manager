@@ -2,6 +2,8 @@ set -e
 
 REF=master
 
+mkdir -p scripts
+
 echo "Making backup of previous composer.* files"
 [ -f composer.json ] && cp composer.json composer.json.bup
 [ -f composer.lock ] && cp composer.json composer.json.bup
@@ -13,11 +15,13 @@ for FILE in \
   composer.lock \
   npm-shrinkwrap.json \
   package.json \
-  pre-update.php \
-  webpack.config.js
+  webpack.config.js \
+  scripts/check.php \
+  scripts/configure.php \
+  scripts/release.sh \
+  scripts/save-repo.php
 do
   URL=https://raw.githubusercontent.com/claroline/Claroline/$REF/$FILE
   echo "Fetching $URL..."
-  curl -fO $URL
+  curl --output $FILE -fO $URL
 done
-
