@@ -1,6 +1,6 @@
 set -e
 
-REF=frontend
+REF=master
 
 echo "Making backup of previous composer.* files"
 [ -f composer.json ] && cp composer.json composer.json.bup
