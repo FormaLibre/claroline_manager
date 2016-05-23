@@ -302,7 +302,7 @@ def update_claroline_light(platform):
     os.system(command)
     claroline_console(platform, 'claroline:update')
     
-def make_user(platform):
+def make_user(platform, download_base = True):
 
     if platform['name'] in [x[0] for x in pwd.getpwall()]:
         print platform['name'] + ' user already exists'
@@ -327,7 +327,8 @@ def make_user(platform):
     else:
 		print 'The webserver ' + args.webserver + ' is unknwown.'
 
-    download_base(platform)
+    if download_base:
+        download_base(platform)
         
 def download_base(platform):
     os.chdir(platform['user_home'])
@@ -647,7 +648,7 @@ elif args.action == 'dist-migrate':
     platforms = get_queried_platforms(args.name)
 
     for platform in platforms:
-        make_user(platform)
+        make_user(platform, False)
         platformPath = __DIR__ + '/platforms/' + platform['name'] + '.yml'
 
         with open(platformPath, 'r') as stream:
