@@ -54,6 +54,14 @@ You can install them with apt-get
 - ssh-agent /bin/bash
 - ssh-add /path/to/key
 
+OR 
+sudo visudo and add these lines
+
+```
+Defaults        env_reset
+Defaults        env_keep+=SSH_AUTH_SOCK
+```
+
 ##### Start the migration
 - python claroline.py dist-migrate --name=PLATFORM_NAME [--force] [-d]
 

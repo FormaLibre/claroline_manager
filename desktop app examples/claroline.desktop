@@ -1,0 +1,6 @@
+[Desktop Entry]
+Version=1.0
+Name=Claroline
+Exec=firefox http://localhost/claroline/web/app.php
+Terminal=false
+Type=Application
