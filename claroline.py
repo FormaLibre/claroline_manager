@@ -39,7 +39,6 @@ help_action = """
     remove:        Removes a platform.
     update:        Update a platform.
     update-light:  Update a platform without claroline:update.
-    update-root:   Update the root directory.
     restore:       Restore platforms.
     migrate:       Migrate platforms.
     dist-migrate:  Migrate from a remote server.
@@ -49,6 +48,7 @@ help_action = """
     param-migrate  Build the parameters files for a migration.
     symlink        Set the symlinks for platforms file sharing.
     refresh        Refresh assets and fire assetic:dump.
+    set-git-root   Ty 7.x branch -_-
 """
 
 help_name = """
@@ -146,6 +146,47 @@ def run_sql(instructions, plainText = True):
         
     print(mysql_cmd)
     os.system(mysql_cmd)
+
+def set_git_root(platform):
+    cmd = 'mv ' + platform['user_home'] + 'claroline ' +  platform['user_home'] + 'moved'
+    print (cmd)
+    os.system(cmd)
+    os.chdir(platform['user_home'])
+    cmd = 'git clone https://github.com/claroline/Claroline.git'
+    print (cmd)
+    os.system(cmd)
+    cmd = 'mv ' + platform['user_home'] + 'Claroline ' +  platform['claroline_root']
+    os.system(cmd)
+    os.chdir(platform['claroline_root'])
+    cmd = 'git checkout 7.x'
+    print (cmd)
+    os.system(cmd)
+    os.system('git checkout .')
+    os.system('git config core.fileMode false')
+    cmd = 'cp -r ' + platform['user_home'] + 'moved/vendor ' + platform['claroline_root'] + 'vendor'
+    print (cmd)
+    os.system(cmd)
+    cmd = 'rm -rf ' +  platform['claroline_root'] + 'app/config'
+    print (cmd)
+    conf = confirm()
+    if not conf:
+        sys.exit()
+    os.system(cmd)
+    cmd = 'cp -r ' + platform['user_home'] + 'moved/app/config ' + platform['claroline_root'] + 'app/config'
+    print (cmd)
+    os.system(cmd)
+    cmd = 'rm -rf ' +  platform['claroline_root'] + 'web'
+    print (cmd)
+    conf = confirm()
+    if not conf:
+        sys.exit()
+    os.system(cmd)
+    cmd = 'cp -r ' + platform['user_home'] + 'moved/web ' + platform['claroline_root'] + 'web'
+    print (cmd)
+    os.system(cmd)
+    cmd = 'cp -r ' + platform['user_home'] + 'moved/files ' + platform['claroline_root'] + 'files'
+    print (cmd)
+    os.system(cmd) 
 
 def get_base_platforms(platforms):
     base = []
@@ -271,21 +312,11 @@ def base_update(name):
         
     return platforms
 
-def update_root_dir(platform):
-    os.chdir(platform['claroline_root'])
-    cmd = 'sh '+ __DIR__ + '/files/update.sh'
-    print cmd
-    os.system(cmd)
-    print 'Please merge the composer.json manually'
-
 def update_composer(platform):
     print 'Starting composer...'
     os.chdir(platform['claroline_root'])
-    os.system('composer update --prefer-dist --no-dev')
-    os.system('npm install')
-    os.system('npm run bower')
-    os.system('npm run themes')
-    os.system('npm run webpack')
+    os.system('composer fetch')
+    os.system('composer build')
     os.system('rm *.gzip')
 
 def update_claroline(platform):
@@ -300,7 +331,7 @@ def update_claroline_light(platform):
     command = 'rm -rf ' + platform['claroline_root'] + 'app/cache/*'
     print command
     os.system(command)
-    claroline_console(platform, 'claroline:update')
+    claroline_console(platform, 'claroline:update -vvv')
     
 def make_user(platform, download_base = True):
 
@@ -381,12 +412,17 @@ def set_symlink(platform):
     if (base['name'] == platform['name']):
         print 'Platform ' + base['name'] + ' cannot symlink itself.'
         return
-    os.system('rm -rf ' + platform['claroline_root'] + 'vendor')
-    os.system('rm -rf ' + platform['claroline_root'] + 'web/packages')
-    os.system('rm -rf ' + platform['claroline_root'] + 'web/dist')
-    os.system('rm -rf ' + platform['claroline_root'] + 'web/themes')
-    os.system('rm -rf ' + platform['claroline_root'] + 'node_modules')
-    os.system('cp ' + base['claroline_root'] + 'app/config/bundles.ini ' + platform["claroline_root"] + 'app/config/bundles.ini')
+
+    directories = ['vendor', 'web/packages', 'web/dist', 'web/themes', 'node_modules']
+    os.chdir(platform['claroline_root'])
+
+    for directory in directories:
+        cmd = 'rm -rf ' + platform['claroline_root'] + directory
+        print cmd
+        os.system(cmd)
+        cmd = 'ln -s ' + base['claroline_root'] + directory + ' ' + directory
+        print cmd
+        os.system(cmd)
 
 def check_restore(folder, symlink):
     restoreFolder = backup_directory + '/' + folder
@@ -711,9 +747,6 @@ if (not args.name):
 if args.action == "param":
     param(args.name, args.symlink)
 
-elif args.action == 'update-root':
-    update_root_dir(get_installed_platform(args.name))
-
 elif args.action == "create":
     create(args.name)
 
@@ -755,6 +788,12 @@ elif args.action == 'perm':
 
     for platform in platforms:
         set_permissions(platform)
+
+elif args.action == 'set-git-root':
+    platforms = get_queried_platforms(args.name)
+
+    for platform in platforms:
+        set_git_root(platform)
 
 elif args.action == 'console':
     platforms = get_queried_platforms(args.name)
