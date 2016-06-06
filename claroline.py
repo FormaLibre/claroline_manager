@@ -315,7 +315,7 @@ def base_update(name):
 def update_composer(platform):
     print 'Starting composer...'
     os.chdir(platform['claroline_root'])
-    os.system('composer fetch')
+    os.system('COMPOSER_DISCARD_CHANGE=true composer fetch')
     os.system('composer build')
     os.system('rm *.gzip')
 
