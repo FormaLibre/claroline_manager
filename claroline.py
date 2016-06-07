@@ -163,30 +163,19 @@ def set_git_root(platform):
     os.system(cmd)
     os.system('git checkout .')
     os.system('git config core.fileMode false')
-    cmd = 'cp -r ' + platform['user_home'] + 'moved/vendor ' + platform['claroline_root'] + 'vendor'
-    print (cmd)
-    os.system(cmd)
-    cmd = 'rm -rf ' +  platform['claroline_root'] + 'app/config'
-    print (cmd)
-    conf = confirm()
-    if not conf:
-        sys.exit()
-    os.system(cmd)
-    cmd = 'cp -r ' + platform['user_home'] + 'moved/app/config ' + platform['claroline_root'] + 'app/config'
-    print (cmd)
-    os.system(cmd)
-    cmd = 'rm -rf ' +  platform['claroline_root'] + 'web'
-    print (cmd)
-    conf = confirm()
-    if not conf:
-        sys.exit()
-    os.system(cmd)
-    cmd = 'cp -r ' + platform['user_home'] + 'moved/web ' + platform['claroline_root'] + 'web'
-    print (cmd)
-    os.system(cmd)
-    cmd = 'cp -r ' + platform['user_home'] + 'moved/files ' + platform['claroline_root'] + 'files'
-    print (cmd)
-    os.system(cmd) 
+
+    targets = ['vendor', 'app/config', 'web', 'files', 'app/bootstrap.php.cache']
+
+    for target in targets:
+        cmd = 'rm -rf ' + platform['claroline_root'] + target
+	print(cmd)
+        conf = confirm()
+        if not conf:
+            sys.exit()
+        os.system(cmd)
+        cmd = 'cp -r ' + platform['user_home'] + 'moved/' + target + ' ' + platform['claroline_root'] + target
+        print(cmd)
+        os.system(cmd)
 
 def get_base_platforms(platforms):
     base = []
@@ -315,7 +304,9 @@ def base_update(name):
 def update_composer(platform):
     print 'Starting composer...'
     os.chdir(platform['claroline_root'])
-    os.system('COMPOSER_DISCARD_CHANGE=true composer fetch')
+    os.system('COMPOSER_DISCARD_CHANGE=true composer update --prefer-source')
+    os.system('npm install')
+    os.system('npm run bower')
     os.system('composer build')
     os.system('rm *.gzip')
 
