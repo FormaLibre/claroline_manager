@@ -324,7 +324,7 @@ def update_claroline_light(platform):
     os.system(command)
     claroline_console(platform, 'claroline:update -vvv')
     
-def make_user(platform, download_base = True):
+def make_user(platform, download = True):
 
     if platform['name'] in [x[0] for x in pwd.getpwall()]:
         print platform['name'] + ' user already exists'
@@ -349,18 +349,18 @@ def make_user(platform, download_base = True):
     else:
 		print 'The webserver ' + args.webserver + ' is unknwown.'
 
-    if download_base:
+    if download:
         download_base(platform)
         
 def download_base(platform):
     os.chdir(platform['user_home'])
-    cmd = 'wget http://packages.claroline.net/releases/' + claroline_src + '/claroline-' + claroline_src + '-prod.tar.gz'
+    cmd = 'wget http://packages.claroline.net/releases/' + claroline_src + '/claroline-' + claroline_src + '.tar.gz'
     print cmd
     os.system(cmd)
-    cmd = 'tar -xvf claroline-' + claroline_src + '-prod.tar.gz'
+    cmd = 'tar -xvf claroline-' + claroline_src + '.tar.gz'
     os.system(cmd)
     print cmd
-    cmd = 'mv claroline-' + claroline_src + '-prod ' + platform['user_home'] + 'claroline'
+    cmd = 'mv claroline-' + claroline_src + ' claroline'
     os.system(cmd)
     print cmd
 	
@@ -560,14 +560,14 @@ def param(name, symlink):
     
 def create(name):
     platform = get_installed_platform(name)
-    make_user(platform)
+    make_user(platform, True)
     make_database(platform)
     set_parameters(platform)
 
     if (platform['base_platform'] != None):
         set_symlink(platform)
         os.chdir(platform['claroline_root'])
-        claroline_console(platform, "claroline:install")
+        os.system('composer fast-install')
         refresh(platform)
     else:
         os.chdir(platform['claroline_root'])
