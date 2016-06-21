@@ -512,7 +512,7 @@ def remove(name):
     cmd = "mysql -u root"
     if (mysql_root_pwd != None):
         cmd += " -p'" + mysql_root_pwd + "'"
-    cmd += " -e 'drop database " + platform['db_name'] + ";drop user '" + name + "'@'localhost';'"
+    cmd += " -e \"drop database \`" + platform['db_name'] + "\`;drop user '" + name + "'@'localhost';\""
     #print 'You probably want to execute the following command manually - this script does not fire it for some reason'
     print cmd
     os.system(cmd)
